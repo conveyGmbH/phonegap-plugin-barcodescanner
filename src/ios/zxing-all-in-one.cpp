@@ -10044,6 +10044,81 @@ const char DecodedBitStreamParser::ALPHANUMERIC_CHARS[] =
 
 namespace {int GB2312_SUBSET = 1;}
 
+#ifdef kPrefixBinary
+/*
+ base64.cpp and base64.h ([here: just the encoding part!]
+ 
+ Copyright (C) 2004-2008 René Nyffenegger
+ 
+ This source code is provided 'as-is', without any express or implied
+ warranty. In no event will the author be held liable for any damages
+ arising from the use of this software.
+ 
+ Permission is granted to anyone to use this software for any purpose,
+ including commercial applications, and to alter it and redistribute it
+ freely, subject to the following restrictions:
+ 
+ 1. The origin of this source code must not be misrepresented; you must not
+ claim that you wrote the original source code. If you use this source code
+ in a product, an acknowledgment in the product documentation would be
+ appreciated but is not required.
+ 
+ 2. Altered source versions must be plainly marked as such, and must not be
+ misrepresented as being the original source code.
+ 
+ 3. This notice may not be removed or altered from any source distribution.
+ 
+ René Nyffenegger rene.nyffenegger@adp-gmbh.ch
+ http://www.adp-gmbh.ch/cpp/common/base64.html
+ */
+static const std::string base64_chars =
+"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+"abcdefghijklmnopqrstuvwxyz"
+"0123456789+/";
+
+std::string base64_encode(unsigned char const* bytes_to_encode, size_t in_len) {
+    std::string ret;
+    int i = 0
+    ,   j = 0;
+    unsigned char char_array_3[3]
+    ,             char_array_4[4];
+    
+    while (in_len--) {
+        char_array_3[i++] = *(bytes_to_encode++);
+        if (i == 3) {
+            char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+            char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+            char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+            char_array_4[3] = char_array_3[2] & 0x3f;
+            
+            for(i = 0; (i <4) ; i++)
+                ret += base64_chars[char_array_4[i]];
+            i = 0;
+        }
+    }
+    
+    if (i)
+    {
+        for(j = i; j < 3; j++)
+            char_array_3[j] = '\0';
+        
+        char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+        char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+        char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+        char_array_4[3] = char_array_3[2] & 0x3f;
+        
+        for (j = 0; (j < i + 1); j++)
+            ret += base64_chars[char_array_4[j]];
+        
+        while((i++ < 3))
+            ret += '=';
+    }
+    
+    return ret;
+}
+// end base64
+#endif
+
 void DecodedBitStreamParser::append(std::string &result,
                                     string const& in,
                                     const char *src) {
@@ -10054,6 +10129,26 @@ void DecodedBitStreamParser::append(std::string &result,
                                     const unsigned char *bufIn,
                                     size_t nIn,
                                     const char *src) {
+#ifdef kPrefixBinary
+    if (result.find(kPrefixBinary) == 0) { // prefix has to be found - at the beginning
+        // here the QR-code is multipart (prefix ends with plain alphanumerics), so result already contains that prefix)
+        if (result.length() > kPrefixLength) { // can be longer than total prefix-length (some more alphanimeric character(s) following)
+            // these extra chars must be moved from the end of intermediate result to beginning of bufIn, so they're included in base64
+            size_t nTmp = result.length() - kPrefixLength;
+            string tmpStr = result.substr(kPrefixLength, nTmp);
+            unsigned char* tmpbuf = new unsigned char[nTmp + nIn];
+            memcpy(tmpbuf, (unsigned char const*)tmpStr.c_str(), nTmp);
+            memcpy(tmpbuf + nTmp, bufIn, nIn);
+            result = result.substr(0, kPrefixLength);
+            result.append(base64_encode(tmpbuf, nTmp + nIn));
+            delete[] tmpbuf;
+        } else {
+            result.append(base64_encode(bufIn, nIn));
+        }
+        return;
+    }
+#endif
+
 #ifndef NO_ICONV
   if (nIn == 0) {
     return;
@@ -10062,33 +10157,42 @@ void DecodedBitStreamParser::append(std::string &result,
   iconv_t cd = iconv_open(StringUtils::UTF8, src);
   if (cd == (iconv_t)-1) {
     result.append((const char *)bufIn, nIn);
-    return;
-  }
+  } else {
+    const int maxOut = (int)(4 * nIn + 1);
+    unsigned char* bufOut = new unsigned char[maxOut];
 
-  const int maxOut = (int)(4 * nIn + 1);
-  unsigned char* bufOut = new unsigned char[maxOut];
+    ICONV_CONST char *fromPtr = (ICONV_CONST char *)bufIn;
+    size_t nFrom = nIn;
+    char *toPtr = (char *)bufOut;
+    size_t nTo = maxOut;
 
-  ICONV_CONST char *fromPtr = (ICONV_CONST char *)bufIn;
-  size_t nFrom = nIn;
-  char *toPtr = (char *)bufOut;
-  size_t nTo = maxOut;
-
-  while (nFrom > 0) {
-    size_t oneway = iconv(cd, &fromPtr, &nFrom, &toPtr, &nTo);
-    if (oneway == (size_t)(-1)) {
-      iconv_close(cd);
-      delete[] bufOut;
-      throw ReaderException("error converting characters");
+    while (nFrom > 0) {
+      size_t oneway = iconv(cd, &fromPtr, &nFrom, &toPtr, &nTo);
+      if (oneway == (size_t)(-1)) {
+        iconv_close(cd);
+        delete[] bufOut;
+        throw ReaderException("error converting characters");
+      }
     }
-  }
-  iconv_close(cd);
+    iconv_close(cd);
 
-  int nResult = (int)(maxOut - nTo);
-  bufOut[nResult] = '\0';
-  result.append((const char *)bufOut);
-  delete[] bufOut;
+    int nResult = (int)(maxOut - nTo);
+    bufOut[nResult] = '\0';
+    result.append((const char *)bufOut);
+    delete[] bufOut;
+  }
 #else
   result.append((const char *)bufIn, nIn);
+#endif
+
+#ifdef kPrefixBase64
+    // QR already contains completely base64ed data, but prefix has to be same as with binary data which explicitely are base64ed
+    // (see above)
+    if (result.find(kPrefixBase64) == 0) { // prefix has to be found - at the beginning
+        string tmpStr = result.substr(kPrefixLength, result.length() - kPrefixLength);
+        result = kPrefixBinary;
+        result.append(tmpStr);
+    }
 #endif
 }
 

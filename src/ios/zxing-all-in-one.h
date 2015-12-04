@@ -17,6 +17,15 @@
 #include <stdlib.h>
 #include <iconv.h>
 
+// some specials for QR-codes
+#define kPrefixBinary "#LSAD" // after the prefix comes *real* binary data (to be taken as is and to be base64 encoded)
+                              // has to at least end with alphanumerics, so the QR-Code is multi-part
+#ifdef kPrefixBinary
+#define kPrefixBase64 "#LS64" // if data following is already base64ed (*all* to be taken as is)
+                              // only needed, if prefix of result should be only kPrefixBinary
+#define kPrefixLength 7 // total prefix-lenght can be more, e.g. with "#LSAD01" or "#LSAD02" for sub-types
+#endif
+
 // file: zxing/Exception.h
 
 #ifndef __EXCEPTION_H__
