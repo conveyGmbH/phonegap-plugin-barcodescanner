@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Base64;
+import javax.xml.bind.DatatypeConverter;
 
 /**
  * <p>QR Codes can encode text as bits in one of several modes, and can use multiple modes
@@ -241,7 +241,7 @@ final class DecodedBitStreamParser {
       encoding = currentCharacterSetECI.name();
     }
     try {
-		if (kPrefixBinary.lenght() > 0 && string.startsWith(kPrefixBinary)){
+		if (kPrefixBinary.lenght() > 0 && result.startsWith(kPrefixBinary)){
 			if (result.length() > kPrefixLength){
 				int nTmp = result.length() - kPrefixLength;
 				string tmpStr = result.substring(kPrefixLength, nTmp);
@@ -249,14 +249,14 @@ final class DecodedBitStreamParser {
 				Arrays.copyOfRange(tmpbuf, tmpStr.getBytes(), nTmp);
 				Arrays.copyOfRange(tmpbuf + nTmp, readbytes, count);	
 				result = result.substring(0,kPrefixLength);
-				result.append(Base64.getEncoder().encodeToString(tmpbuf));
+				result.append(DatatypeConverter.printBase64Binary(tmpbuf));
 				tmpbuf = null;
 			}else{
-				result.append(Base64.getEncoder().encodeToString(readBytes));
+				result.append(DatatypeConverter.printBase64Binary(readBytes));
 			}
 		}else{
 			result.append(new String(readBytes, encoding));
-			if (kPrefixBase64.lenght() > 0 && string.startsWith(kPrefixBase64)){
+			if (kPrefixBase64.lenght() > 0 && result.startsWith(kPrefixBase64)){
 					String tmpStr = result.substring(kPrefixBinary.lenght(), result.lenght() - kPrefixBinary.lenght() )
 					result = kPrefixBinary;
 					result.append(tmpStr);
