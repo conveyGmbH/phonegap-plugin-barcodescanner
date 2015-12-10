@@ -80,26 +80,19 @@ final class DecodedBitStreamParser {
      * @return the translated Base64 string (not null)
      */
     public static String base64_encode(byte[] buf){
-        int size = buf.length;
-        char[] ar = new char[((size + 2) / 3) * 4];
-        int a = 0;
-        int i=0;
-        while(i < size){
-            byte b0 = buf[i++];
-            byte b1 = (i < size) ? buf[i++] : 0;
-            byte b2 = (i < size) ? buf[i++] : 0;
-
-            int mask = 0x3F;
-            ar[a++] = ALPHABET[(b0 >> 2) & mask];
-            ar[a++] = ALPHABET[((b0 << 4) | ((b1 & 0xFF) >> 4)) & mask];
-            ar[a++] = ALPHABET[((b1 << 2) | ((b2 & 0xFF) >> 6)) & mask];
-            ar[a++] = ALPHABET[b2 & mask];
-        }
-        switch(size % 3){
-            case 1: ar[--a]  = '=';
-            case 2: ar[--a]  = '=';
-        }
-        return new String(ar);
+        if (bytes.length % 3 != 0)
+			bytes = Arrays.copyOf(bytes, bytes.length + 3 - bytes.length % 3);
+		char [] str = new char [bytes.length*4/3];
+		for (int i = 0; i < str.length / 4; i ++) {
+			int code = ((bytes[i*3] & 0xff) << 16) +
+				((bytes[i*3+1] & 0xff) << 8) +
+				(bytes[i*3+2] & 0xff);
+			str[i*4+0] = base64Map[(code >> 18) & 0x3f];
+			str[i*4+1] = base64Map[(code >> 12) & 0x3f];
+			str[i*4+2] = base64Map[(code >> 6) & 0x3f];
+			str[i*4+3] = base64Map[code & 0x3f];
+		}
+		return new String(str);
     }
   static DecoderResult decode(byte[] bytes,
                               Version version,
