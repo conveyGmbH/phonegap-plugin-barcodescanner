@@ -39,14 +39,7 @@ import javax.xml.bind.DatatypeConverter;
  * @author Sean Owen
  */
 
- /*
- String kPrefixBinary = "";
- String kPrefixBase64 = "";
- int kPrefixLength = 0;
- */
- String kPrefixBinary = "#LSAD";
- String kPrefixBase64 = "#LS64";
- int kPrefixLength = 7;
+ 
 
 final class DecodedBitStreamParser {
 
@@ -60,6 +53,15 @@ final class DecodedBitStreamParser {
       ' ', '$', '%', '*', '+', '-', '.', '/', ':'
   };
   private static final int GB2312_SUBSET = 1;
+
+	/*
+	private static final String kPrefixBinary = "";
+	private static final String kPrefixBase64 = "";
+	private static final int kPrefixLength = 0;
+	*/
+	private static final String kPrefixBinary = "#LSAD";
+	private static final String kPrefixBase64 = "#LS64";
+	private static final int kPrefixLength = 7;
 
   private DecodedBitStreamParser() {
   }
