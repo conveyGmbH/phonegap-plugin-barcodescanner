@@ -65,7 +65,42 @@ final class DecodedBitStreamParser {
 
   private DecodedBitStreamParser() {
   }
+  
+  private static int[]  to_Int   = new int[128];
 
+  static {
+        for(int i=0; i< ALPHANUMERIC_CHARS.length; i++){
+            to_Int[ALPHANUMERIC_CHARS[i]]= i;
+        }
+
+    /**
+     * Translates the specified byte array into Base64 string.
+     *
+     * @param buf the byte array (not null)
+     * @return the translated Base64 string (not null)
+     */
+    public static String base64_encode(byte[] buf){
+        int size = buf.length;
+        char[] ar = new char[((size + 2) / 3) * 4];
+        int a = 0;
+        int i=0;
+        while(i < size){
+            byte b0 = buf[i++];
+            byte b1 = (i < size) ? buf[i++] : 0;
+            byte b2 = (i < size) ? buf[i++] : 0;
+
+            int mask = 0x3F;
+            ar[a++] = ALPHABET[(b0 >> 2) & mask];
+            ar[a++] = ALPHABET[((b0 << 4) | ((b1 & 0xFF) >> 4)) & mask];
+            ar[a++] = ALPHABET[((b1 << 2) | ((b2 & 0xFF) >> 6)) & mask];
+            ar[a++] = ALPHABET[b2 & mask];
+        }
+        switch(size % 3){
+            case 1: ar[--a]  = '=';
+            case 2: ar[--a]  = '=';
+        }
+        return new String(ar);
+    }
   static DecoderResult decode(byte[] bytes,
                               Version version,
                               ErrorCorrectionLevel ecLevel,
@@ -251,10 +286,10 @@ final class DecodedBitStreamParser {
 				Arrays.copyOfRange(tmpbuf, tmpStr.getBytes(), nTmp);
 				Arrays.copyOfRange(tmpbuf + nTmp, readbytes, count);	
 				result = result.substring(0,kPrefixLength);
-				result.append(DatatypeConverter.printBase64Binary(tmpbuf));
+				result.append(base64_encode(tmpbuf));
 				tmpbuf = null;
 			}else{
-				result.append(DatatypeConverter.printBase64Binary(readBytes));
+				result.append(base64_encode(readBytes));
 			}
 		}else{
 			result.append(new String(readBytes, encoding));
