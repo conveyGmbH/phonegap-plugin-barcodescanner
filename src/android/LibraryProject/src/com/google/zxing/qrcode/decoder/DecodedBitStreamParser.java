@@ -30,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 import javax.xml.bind.DatatypeConverter;
 
+import org.apache.commons.codec.binary.Base64;
+
 /**
  * <p>QR Codes can encode text as bits in one of several modes, and can use multiple modes
  * in one QR Code. This class decodes the bits back into text.</p>
@@ -39,7 +41,14 @@ import javax.xml.bind.DatatypeConverter;
  * @author Sean Owen
  */
 
- 
+ /*
+ String kPrefixBinary = "";
+ String kPrefixBase64 = "";
+ int kPrefixLength = 0;
+ */
+ String kPrefixBinary = "#LSAD";
+ String kPrefixBase64 = "#LS64";
+ int kPrefixLength = 7;
 
 final class DecodedBitStreamParser {
 
@@ -65,35 +74,7 @@ final class DecodedBitStreamParser {
 
   private DecodedBitStreamParser() {
   }
-  
-  private static int[]  to_Int   = new int[128];
 
-  static {
-        for(int i=0; i< ALPHANUMERIC_CHARS.length; i++){
-            to_Int[ALPHANUMERIC_CHARS[i]]= i;
-        }
-
-    /**
-     * Translates the specified byte array into Base64 string.
-     *
-     * @param buf the byte array (not null)
-     * @return the translated Base64 string (not null)
-     */
-    public static String base64_encode(byte[] buf){
-        if (bytes.length % 3 != 0)
-			bytes = Arrays.copyOf(bytes, bytes.length + 3 - bytes.length % 3);
-		char [] str = new char [bytes.length*4/3];
-		for (int i = 0; i < str.length / 4; i ++) {
-			int code = ((bytes[i*3] & 0xff) << 16) +
-				((bytes[i*3+1] & 0xff) << 8) +
-				(bytes[i*3+2] & 0xff);
-			str[i*4+0] = base64Map[(code >> 18) & 0x3f];
-			str[i*4+1] = base64Map[(code >> 12) & 0x3f];
-			str[i*4+2] = base64Map[(code >> 6) & 0x3f];
-			str[i*4+3] = base64Map[code & 0x3f];
-		}
-		return new String(str);
-    }
   static DecoderResult decode(byte[] bytes,
                               Version version,
                               ErrorCorrectionLevel ecLevel,
@@ -279,10 +260,10 @@ final class DecodedBitStreamParser {
 				Arrays.copyOfRange(tmpbuf, tmpStr.getBytes(), nTmp);
 				Arrays.copyOfRange(tmpbuf + nTmp, readbytes, count);	
 				result = result.substring(0,kPrefixLength);
-				result.append(base64_encode(tmpbuf));
+				result.append(Base64().encodeToString(tmpbuf));
 				tmpbuf = null;
 			}else{
-				result.append(base64_encode(readBytes));
+				result.append(Base64().encodeToString(readBytes));
 			}
 		}else{
 			result.append(new String(readBytes, encoding));
