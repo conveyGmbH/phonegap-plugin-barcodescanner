@@ -10184,17 +10184,6 @@ void DecodedBitStreamParser::append(std::string &result,
 #else
   result.append((const char *)bufIn, nIn);
 #endif
-
-#ifdef kPrefixBase64
-    // QR already contains completely base64ed data, but prefix has to be same as with binary data which explicitely are base64ed
-    // (see above)
-    if (result.find(kPrefixBase64) == 0) { // prefix has to be found - at the beginning
-        string prefx = kPrefixBinary;
-        size_t nLeng = prefx.length();
-        string tmpStr = result.substr(nLeng, result.length() - nLeng);
-        result = prefx.append(tmpStr);
-    }
-#endif
 }
 
 void DecodedBitStreamParser::decodeHanziSegment(Ref<BitSource> bits_,
