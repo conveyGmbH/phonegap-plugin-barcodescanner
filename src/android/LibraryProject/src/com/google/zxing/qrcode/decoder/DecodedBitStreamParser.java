@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 import javax.xml.bind.DatatypeConverter;
 
-import org.apache.commons.codec.binary.Base64;
+import android.util.Base64;
 
 /**
  * <p>QR Codes can encode text as bits in one of several modes, and can use multiple modes
@@ -259,10 +259,10 @@ final class DecodedBitStreamParser {
 				Arrays.copyOfRange(tmpbuf, tmpStr.getBytes(), nTmp);
 				Arrays.copyOfRange(tmpbuf + nTmp, readbytes, count);
 				result = result.substring(0,kPrefixLength);
-				result.append(Base64().encodeToString(tmpbuf));
+				result.append(Base64.encodeToString(tmpbuf, Base64.NO_WRAP));
 				tmpbuf = null;
 			}else{
-				result.append(Base64().encodeToString(readBytes));
+				result.append(Base64.encodeToString(readBytes, Base64.NO_WRAP));
 			}
 		}else{
 			result.append(new String(readBytes, encoding));
