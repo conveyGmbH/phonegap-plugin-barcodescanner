@@ -23,13 +23,13 @@ import com.google.zxing.common.CharacterSetECI;
 import com.google.zxing.common.DecoderResult;
 import com.google.zxing.common.StringUtils;
 
+import java.lang.String;
+import java.lang.System;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import javax.xml.bind.DatatypeConverter;
-
 import android.util.Base64;
 
 /**
@@ -40,8 +40,6 @@ import android.util.Base64;
  *
  * @author Sean Owen
  */
-
-
 final class DecodedBitStreamParser {
 
   /**
@@ -70,6 +68,8 @@ final class DecodedBitStreamParser {
   private static final int kPrefixLength = 7;
 
   // end of specials for QR-codes ------------------------
+
+
 
   private DecodedBitStreamParser() {
   }
@@ -251,21 +251,22 @@ final class DecodedBitStreamParser {
       encoding = currentCharacterSetECI.name();
     }
     try {
-		if (kPrefixBinary.lenght() > 0 && result.toString().startsWith(kPrefixBinary)){
+
+		if (kPrefixBinary.length() > 0 && result.toString().indexOf(kPrefixBinary) == 0 ){
 			if (result.length() > kPrefixLength){
 				int nTmp = result.length() - kPrefixLength;
-				string tmpStr = result.substring(kPrefixLength, kPrefixLength + nTmp);
+				String tmpStr = result.substring(kPrefixLength, kPrefixLength + nTmp);
 				byte[] tmpbuf = new byte[nTmp + count];
-				Arrays.copyOfRange(tmpbuf, tmpStr.getBytes(), nTmp);
-				Arrays.copyOfRange(tmpbuf + nTmp, readbytes, count);
-				result = result.substring(0,kPrefixLength);
+				System.arraycopy(tmpStr.getBytes(), 0, tmpbuf, 0, nTmp);
+				System.arraycopy(readBytes, 0, tmpbuf, nTmp, count);
+				result.delete(kPrefixLength, nTmp + kPrefixLength);
 				result.append(Base64.encodeToString(tmpbuf, Base64.NO_WRAP));
 				tmpbuf = null;
 			}else{
 				result.append(Base64.encodeToString(readBytes, Base64.NO_WRAP));
 			}
 		}else{
-			result.append(new String(readBytes, encoding));
+      result.append(new String(readBytes, encoding));
 		}
     } catch (UnsupportedEncodingException uce) {
       throw FormatException.getFormatInstance();
