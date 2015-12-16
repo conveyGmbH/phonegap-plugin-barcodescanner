@@ -2,7 +2,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:rim="http://www.blackberry.com/ns/widgets"
     id="phonegap-plugin-barcodescanner"
-    version="4.0.2">
+    version="4.1.0">
 
     <name>BarcodeScanner</name>
     <description>You can use the BarcodeScanner plugin to scan different types of barcodes (using the device's camera) and get the metadata encoded in them for processing within your application.</description>
@@ -362,6 +362,7 @@
     <!-- BlackBerry 10 -->
     <platform name="blackberry10">
         <source-file src="src/blackberry10/index.js" target-dir="BarcodeScanner" />
+        <source-file src="src/blackberry10/qrcode.js" target-dir="BarcodeScanner" />
         <lib-file src="src/blackberry10/native/device/libBarcodeScanner.so" arch="device"/>
         <lib-file src="src/blackberry10/native/simulator/libBarcodeScanner.so" arch="simulator"/>
         <config-file target="www/config.xml" parent="/widget">
