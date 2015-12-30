@@ -168,30 +168,65 @@ module.exports = {
          * @param {Windows.Graphics.Display.DisplayOrientations} displayOrientation
          * @return {Number}
          */
-        function videoPreviewRotationLookup(displayOrientation, isMirrored) {
+        function videoPreviewRotationLookup(displayOrientation, nativeOrientation, counterclockwise) {
             var degreesToRotate;
-
-            switch (displayOrientation) {
+            switch (nativeOrientation) {
                 case Windows.Graphics.Display.DisplayOrientations.portrait:
-                    degreesToRotate = 90;
-                    break;
-                case Windows.Graphics.Display.DisplayOrientations.landscapeFlipped:
-                    degreesToRotate = 180;
-                    break;
-                case Windows.Graphics.Display.DisplayOrientations.portraitFlipped:
-                    degreesToRotate = 270;
+                    switch (displayOrientation) {
+                        case Windows.Graphics.Display.DisplayOrientations.portrait:
+                            degreesToRotate = 0;
+                            break;
+                        case Windows.Graphics.Display.DisplayOrientations.landscapeFlipped:
+                            if (counterclockwise) {
+                                degreesToRotate = 270;
+                            } else {
+                                degreesToRotate = 90;
+                            }
+                            break;
+                        case Windows.Graphics.Display.DisplayOrientations.portraitFlipped:
+                            degreesToRotate = 180;
+                            break;
+                        case Windows.Graphics.Display.DisplayOrientations.landscape:
+                            if (counterclockwise) {
+                                degreesToRotate = 90;
+                            } else {
+                                degreesToRotate = 270;
+                            }
+                            break;
+                        default:
+                            degreesToRotate = 0;
+                            break;
+                    }
                     break;
                 case Windows.Graphics.Display.DisplayOrientations.landscape:
-                    /* falls through */
                 default:
-                    degreesToRotate = 0;
+                    switch (displayOrientation) {
+                        case Windows.Graphics.Display.DisplayOrientations.landscape:
+                            degreesToRotate = 0;
+                            break;
+                        case Windows.Graphics.Display.DisplayOrientations.portrait:
+                            if (counterclockwise) {
+                                degreesToRotate = 270;
+                            } else {
+                                degreesToRotate = 90;
+                            }
+                            break;
+                        case Windows.Graphics.Display.DisplayOrientations.landscapeFlipped:
+                            degreesToRotate = 180;
+                            break;
+                        case Windows.Graphics.Display.DisplayOrientations.portraitFlipped:
+                            if (counterclockwise) {
+                                degreesToRotate = 90;
+                            } else {
+                                degreesToRotate = 270;
+                            }
+                            break;
+                        default:
+                            degreesToRotate = 0;
+                            break;
+                    }
                     break;
             }
-
-            if (isMirrored) {
-                degreesToRotate = (360 - degreesToRotate) % 360;
-            }
-
             return degreesToRotate;
         }
 
@@ -206,10 +241,11 @@ module.exports = {
                     displayInformation = Windows.Graphics.Display.DisplayInformation.getForCurrentView();
                 }
                 var currentOrientation = (displayInformation && displayInformation.currentOrientation);
+                var nativeOrientation = (displayInformation && displayInformation.nativeOrientation);
                 previewMirroring = previewMirroring || capture.getPreviewMirroring();
 
                 // Lookup up the rotation degrees.  
-                rotDegree = videoPreviewRotationLookup(currentOrientation, previewMirroring);
+                rotDegree = videoPreviewRotationLookup(currentOrientation, nativeOrientation, previewMirroring);
 
                 // since "orientationchange" event might not work, poll for changes...
                 window.setTimeout(updatePreviewForRotation, 500);
