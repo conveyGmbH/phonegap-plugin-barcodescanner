@@ -8,6 +8,142 @@
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
  */
 
+var urlutil = require('cordova/urlutil');
+
+/**
+ * List of supported barcode formats from ZXing library. Used to return format
+ *   name instead of number code as per plugin spec.
+ *
+ * @enum {String}
+ */
+var BARCODE_FORMAT = {
+    1: 'AZTEC',
+    2: 'CODABAR',
+    4: 'CODE_39',
+    8: 'CODE_93',
+    16: 'CODE_128',
+    32: 'DATA_MATRIX',
+    64: 'EAN_8',
+    128: 'EAN_13',
+    256: 'ITF',
+    512: 'MAXICODE',
+    1024: 'PDF_417',
+    2048: 'QR_CODE',
+    4096: 'RSS_14',
+    8192: 'RSS_EXPANDED',
+    16384: 'UPC_A',
+    32768: 'UPC_E',
+    61918: 'All_1D',
+    65536: 'UPC_EAN_EXTENSION',
+    131072: 'MSI',
+    262144: 'PLESSEY'
+};
+
+/**
+ * The pure JS implementation of barcode reader from WinRTBarcodeReader.winmd.
+ *   Works only on Windows 10 devices and more efficient than original one.
+ *
+ * @class {BarcodeReader}
+ */
+function BarcodeReader () {
+    this._promise = null;
+    this._cancelled = false;
+}
+
+/**
+ * Returns an instance of Barcode reader, depending on capabilities of Media
+ *   Capture API
+ *
+ * @static
+ * @constructs {BarcodeReader}
+ *
+ * @param   {MediaCapture}   mediaCaptureInstance  Instance of
+ *   Windows.Media.Capture.MediaCapture class
+ *
+ * @return  {BarcodeReader}  BarcodeReader instance that could be used for
+ *   scanning
+ */
+BarcodeReader.get = function (mediaCaptureInstance) {
+    if (mediaCaptureInstance.getPreviewFrameAsync && ZXing.BarcodeReader) {
+        return new BarcodeReader();
+    }
+
+    // If there is no corresponding API (Win8/8.1/Phone8.1) use old approach with WinMD library
+    return new WinRTBarcodeReader.Reader();
+
+};
+
+/**
+ * Initializes instance of reader.
+ *
+ * @param   {MediaCapture}  capture  Instance of
+ *   Windows.Media.Capture.MediaCapture class, used for acquiring images/ video
+ *   stream for barcode scanner.
+ * @param   {Number}  width    Video/image frame width
+ * @param   {Number}  height   Video/image frame height
+ */
+BarcodeReader.prototype.init = function (capture, width, height) {
+    this._capture = capture;
+    this._width = width;
+    this._height = height;
+    this._zxingReader = new ZXing.BarcodeReader();
+};
+
+/**
+ * Starts barcode search routines asyncronously.
+ *
+ * @return  {Promise<ScanResult>}  barcode scan result or null if search
+ *   cancelled.
+ */
+BarcodeReader.prototype.readCode = function () {
+
+    /**
+     * Grabs a frame from preview stream uning Win10-only API and tries to
+     *   get a barcode using zxing reader provided. If there is no barcode
+     *   found, returns null.
+     */
+    function scanBarcodeAsync(mediaCapture, zxingReader, frameWidth, frameHeight) {
+        // Shortcuts for namespaces
+        var Imaging = Windows.Graphics.Imaging;
+        var Streams = Windows.Storage.Streams;
+
+        var frame = new Windows.Media.VideoFrame(Imaging.BitmapPixelFormat.bgra8, frameWidth, frameHeight);
+        return mediaCapture.getPreviewFrameAsync(frame)
+        .then(function (capturedFrame) {
+
+            // Copy captured frame to buffer for further deserialization
+            var bitmap = capturedFrame.softwareBitmap;
+            var rawBuffer = new Streams.Buffer(bitmap.pixelWidth * bitmap.pixelHeight * 4);
+            capturedFrame.softwareBitmap.copyToBuffer(rawBuffer);
+            capturedFrame.close();
+
+            // Get raw pixel data from buffer
+            var data = new Uint8Array(rawBuffer.length);
+            var dataReader = Streams.DataReader.fromBuffer(rawBuffer);
+            dataReader.readBytes(data);
+            dataReader.close();
+
+            return zxingReader.decode(data, frameWidth, frameHeight, ZXing.BitmapFormat.bgra32);
+        });
+    }
+
+    var self = this;
+    return scanBarcodeAsync(this._capture, this._zxingReader, this._width, this._height)
+    .then(function (result) {
+        if (self._cancelled)
+            return null;
+
+        return result || (self._promise = self.readCode());
+    });
+};
+
+/**
+ * Stops barcode search
+ */
+BarcodeReader.prototype.stop = function () {
+    this._cancelled = true;
+};
+
 module.exports = {
 
     /**
@@ -17,210 +153,273 @@ module.exports = {
      * @param  {array} args       Arguments array
      */
     scan: function (success, fail, args) {
-
         var capturePreview,
             capturePreviewAlignmentMark,
             captureCancelButton,
+            navigationButtonsDiv,
+            previewMirroring,
+            rotateVideoOnOrientationChange,
+            prevRotDegree,
+            closeButton,
             capture,
-            reader,
-            prevRotDegree;
-        
-        var rotateVideoOnOrientationChange = true;
-        var reverseVideoRotation = false;
+            reader;
+
+        /**
+         * @param {Windows.Graphics.Display.DisplayOrientations} displayOrientation
+         * @return {Number}
+         */
+        function videoPreviewRotationLookup(displayOrientation, isMirrored) {
+            var degreesToRotate;
+
+            switch (displayOrientation) {
+                case Windows.Graphics.Display.DisplayOrientations.portrait:
+                    degreesToRotate = 90;
+                    break;
+                case Windows.Graphics.Display.DisplayOrientations.landscapeFlipped:
+                    degreesToRotate = 180;
+                    break;
+                case Windows.Graphics.Display.DisplayOrientations.portraitFlipped:
+                    degreesToRotate = 270;
+                    break;
+                case Windows.Graphics.Display.DisplayOrientations.landscape:
+                    /* falls through */
+                default:
+                    degreesToRotate = 0;
+                    break;
+            }
+
+            if (isMirrored) {
+                degreesToRotate = (360 - degreesToRotate) % 360;
+            }
+
+            return degreesToRotate;
+        }
+
+        function updatePreviewForRotation(evt) {
+            var ret;
+            if (!capture) {
+                return;
+            }
+            if (rotateVideoOnOrientationChange) {
+                var displayInformation = (evt && evt.target);
+                if (!displayInformation || typeof displayInformation.currentOrientation === "undefined") {
+                    displayInformation = Windows.Graphics.Display.DisplayInformation.getForCurrentView();
+                }
+                var currentOrientation = (displayInformation && displayInformation.currentOrientation);
+                previewMirroring = previewMirroring || capture.getPreviewMirroring();
+
+                // Lookup up the rotation degrees.  
+                rotDegree = videoPreviewRotationLookup(currentOrientation, previewMirroring);
+
+                // since "orientationchange" event might not work, poll for changes...
+                window.setTimeout(updatePreviewForRotation, 500);
+            } else {
+                rotDegree = 0;
+            }
+            if (typeof prevRotDegree === "undefined" || prevRotDegree !== rotDegree) {
+                //Set the video subtype
+                var rotGUID = "{0xC380465D, 0x2271, 0x428C, {0x9B, 0x83, 0xEC, 0xEA, 0x3B, 0x4A, 0x85, 0xC1}}";
+
+                // rotate the preview video
+                var videoEncodingProperties = capture.videoDeviceController.getMediaStreamProperties(Windows.Media.Capture.MediaStreamType.videoPreview);
+                if (videoEncodingProperties) {
+                    if (videoEncodingProperties.properties.hasKey(rotGUID)) {
+                        videoEncodingProperties.properties.remove(rotGUID);
+                    }
+                    videoEncodingProperties.properties.insert(rotGUID, rotDegree);
+                    ret = capture.videoDeviceController.setMediaStreamPropertiesAsync(Windows.Media.Capture.MediaStreamType.videoPreview, videoEncodingProperties);
+                }
+                prevRotDegree = rotDegree;
+            }
+            return ret;
+        }
+
         /**
          * Creates a preview frame and necessary objects
          */
         function createPreview() {
 
             // Create fullscreen preview
+            var capturePreviewFrameStyle = document.createElement('link');
+            capturePreviewFrameStyle.rel = "stylesheet";
+            capturePreviewFrameStyle.type = "text/css";
+            capturePreviewFrameStyle.href = urlutil.makeAbsolute("/www/css/plugin-barcodeScanner.css");
+
+            document.head.appendChild(capturePreviewFrameStyle);
+
+            capturePreviewFrame = document.createElement('div');
+            capturePreviewFrame.className = "barcode-scanner-wrap";
+
             capturePreview = document.createElement("video");
-            capturePreview.style.cssText = "position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: black";
+            capturePreview.className = "barcode-scanner-preview";
+            capturePreview.addEventListener('click', function () {
+                focus();
+            });
 
             capturePreviewAlignmentMark = document.createElement('div');
-            capturePreviewAlignmentMark.style.cssText = "position: absolute; left: 0; top: 50%; width: 100%; height: 3px; background: red";
+            capturePreviewAlignmentMark.className = "barcode-scanner-mark";
 
-            // Create cancel button
-            captureCancelButton = document.createElement("button");
-            captureCancelButton.innerText = "Cancel";
-            captureCancelButton.style.cssText = "position: absolute; right: 0; bottom: 0; display: block; margin: 20px";
-            captureCancelButton.addEventListener('click', cancelPreview, false);
+            navigationButtonsDiv = document.createElement("div");
+            navigationButtonsDiv.className = "barcode-scanner-app-bar";
+            navigationButtonsDiv.onclick = function (e) {
+                e.cancelBubble = true;
+            };
 
-            capture = new Windows.Media.Capture.MediaCapture();
+            closeButton = document.createElement("div");
+            closeButton.innerText = "close";
+            closeButton.className = "app-bar-action action-close";
+            navigationButtonsDiv.appendChild(closeButton);
+
+            closeButton.addEventListener("click", cancelPreview, false);
+            document.addEventListener('backbutton', cancelPreview, false);
+
+            [capturePreview, capturePreviewAlignmentMark, navigationButtonsDiv].forEach(function (element) {
+                capturePreviewFrame.appendChild(element);
+            });
         }
 
-        function videoPreviewRotationLookup(displayOrientation, counterclockwise) {
-            var degreesToRotate;
+        function focus(controller) {
 
-            switch (displayOrientation) {
-                case Windows.Graphics.Display.DisplayOrientations.landscape:
-                    degreesToRotate = 0;
-                    break;
-                case Windows.Graphics.Display.DisplayOrientations.portrait:
-                    if (counterclockwise) {
-                        degreesToRotate = 270;
-                    } else {
-                        degreesToRotate = 90;
-                    }
-                    break;
-                case Windows.Graphics.Display.DisplayOrientations.landscapeFlipped:
-                    degreesToRotate = 180;
-                    break;
-                case Windows.Graphics.Display.DisplayOrientations.portraitFlipped:
-                    if (counterclockwise) {
-                        degreesToRotate = 90;
-                    } else {
-                        degreesToRotate = 270;
-                    }
-                    break;
-                default:
-                    degreesToRotate = 0;
-                    break;
+            var result = WinJS.Promise.wrap();
+
+            if (!capturePreview || capturePreview.paused) {
+                // If the preview is not yet playing, there is no sense in running focus
+                return result;
             }
 
-            return degreesToRotate;
-        }
-
-        function updatePreviewForRotation() {
-            if (!capture) {
-                return;
-            }
-            var rotDegree;
-            var videoEncodingProperties = capture.videoDeviceController.getMediaStreamProperties(Windows.Media.Capture.MediaStreamType.VideoPreview);
-
-            var previewMirroring = capture.getPreviewMirroring();
-            var counterclockwiseRotation = (previewMirroring && !reverseVideoRotation) ||
-                (!previewMirroring && reverseVideoRotation);
-
-            //Set the video subtype
-            var rotGUID = "{0xC380465D, 0x2271, 0x428C, {0x9B, 0x83, 0xEC, 0xEA, 0x3B, 0x4A, 0x85, 0xC1}}";
-
-
-            if (rotateVideoOnOrientationChange) {
-                // Lookup up the rotation degrees.  
-                rotDegree = videoPreviewRotationLookup(Windows.Graphics.Display.DisplayInformation.getForCurrentView().currentOrientation, counterclockwiseRotation);
-                if (typeof prevRotDegree === "undefined" || prevRotDegree !== rotDegree) {
-                    // rotate the preview video
-                    if (videoEncodingProperties.properties.hasKey(rotGUID)) {
-                        videoEncodingProperties.properties.remove(rotGUID);
-                    }
-                    videoEncodingProperties.properties.insert(rotGUID, rotDegree);
-                    capture.setEncodingPropertiesAsync(Windows.Media.Capture.MediaStreamType.VideoPreview, videoEncodingProperties, null);
-                    prevRotDegree = rotDegree;
-                }
-                // since "orientationchange" event might not work, poll for changes...
-                window.setTimeout(updatePreviewForRotation, 500);
-            } else {
-                if (typeof prevRotDegree === "undefined") {
-                    capture.setPreviewRotation(Windows.Media.Capture.VideoRotation.none);
-                    prevRotDegree = 0;
+            if (!controller) {
+                try {
+                    controller = capture && capture.videoDeviceController;
+                } catch (err) {
+                    console.log('Failed to access focus control for current camera: ' + err);
+                    return result;
                 }
             }
+
+            if (!controller.focusControl || !controller.focusControl.supported) {
+                console.log('Focus control for current camera is not supported');
+                return result;
+            }
+
+            return controller.focusControl.focusAsync();
         }
 
+        function setupFocus(focusControl) {
+
+            function supportsFocusMode(mode) {
+                return focusControl.supportedFocusModes.indexOf(mode).returnValue;
+            }
+
+            if (!focusControl || !focusControl.supported || !focusControl.configure) {
+                return WinJS.Promise.wrap();
+            }
+
+            var FocusMode = Windows.Media.Devices.FocusMode;
+            var focusConfig = new Windows.Media.Devices.FocusSettings();
+            // changed to macro for short distance
+            focusConfig.autoFocusRange = Windows.Media.Devices.AutoFocusRange.macro;
+
+            if (supportsFocusMode(FocusMode.continuous)) {
+                console.log("Device supports continuous focus mode");
+                focusConfig.mode = FocusMode.continuous;
+            } else if (supportsFocusMode(FocusMode.auto)) {
+                console.log("Device doesn\'t support continuous focus mode, switching to autofocus mode");
+                focusConfig.mode = FocusMode.auto;
+            }
+
+            focusControl.configure(focusConfig);
+            // Need to wrap this in setTimeout since continuous focus should start only after preview has started. See
+            // 'Remarks' at https://msdn.microsoft.com/en-us/library/windows/apps/windows.media.devices.focuscontrol.configure.aspx
+            return WinJS.Promise.timeout(200)
+            .then(function () {
+                return focusControl.focusAsync();
+            });
+        }
 
         /**
          * Starts stream transmission to preview frame and then run barcode search
          */
         function startPreview() {
-            var captureSettings = new Windows.Media.Capture.MediaCaptureInitializationSettings();
-            captureSettings.streamingCaptureMode = Windows.Media.Capture.StreamingCaptureMode.video;
-            captureSettings.photoCaptureSource = Windows.Media.Capture.PhotoCaptureSource.videoPreview;
-            
-            // Enumerate cameras and add find first back camera
-            var cameraId = null;
-            var deviceInfo = Windows.Devices.Enumeration.DeviceInformation;
-            if (deviceInfo) {
-                deviceInfo.findAllAsync(Windows.Devices.Enumeration.DeviceClass.videoCapture).done(function (cameras) {
-                    if (cameras && cameras.length > 0) {
-                        cameras.forEach(function (camera) {
-                            if (camera && !cameraId) {
-                                // Make use of the camera's location if it is available to the description
-                                var camLocation = camera.enclosureLocation;
-                                if (camLocation && camLocation.panel === Windows.Devices.Enumeration.Panel.back) {
-                                    cameraId = camera.id;
-                                }
-                            }
-                        });
-                    }
-                    if (cameraId) {
-                        captureSettings.videoDeviceId = cameraId;
+            /**
+             * Detects the first appropriate camera located at the back panel of device. If
+             *   there is no back cameras, returns the first available.
+             *
+             * @returns {Promise<String>} Camera id
+             */
+            function findCamera() {
+                var Devices = Windows.Devices.Enumeration;
+
+                // Enumerate cameras and add them to the list
+                return Devices.DeviceInformation.findAllAsync(Devices.DeviceClass.videoCapture)
+                .then(function (cameras) {
+
+                    if (!cameras || cameras.length === 0) {
+                        throw new Error("No cameras found");
                     }
 
-                    capture.initializeAsync(captureSettings).done(function () {
-
-                        //trying to set focus mode
-                        var controller = capture.videoDeviceController;
-
-                        if (controller.focusControl && controller.focusControl.supported) {
-                            if (controller.focusControl.configure) {
-                                var focusConfig = new Windows.Media.Devices.FocusSettings();
-                                focusConfig.autoFocusRange = Windows.Media.Devices.AutoFocusRange.macro;
-
-                                var supportContinuousFocus = controller.focusControl.supportedFocusModes.indexOf(Windows.Media.Devices.FocusMode.continuous).returnValue;
-                                var supportAutoFocus = controller.focusControl.supportedFocusModes.indexOf(Windows.Media.Devices.FocusMode.auto).returnValue;
-
-                                if (supportContinuousFocus) {
-                                    focusConfig.mode = Windows.Media.Devices.FocusMode.continuous;
-                                } else if (supportAutoFocus) {
-                                    focusConfig.mode = Windows.Media.Devices.FocusMode.auto;
-                                }
-
-                                controller.focusControl.configure(focusConfig);
-                                controller.focusControl.focusAsync();
-                            }
-                        }
-
-                        var deviceProps = controller.getAvailableMediaStreamProperties(Windows.Media.Capture.MediaStreamType.videoRecord);
-
-                        deviceProps = Array.prototype.slice.call(deviceProps);
-                        deviceProps = deviceProps.filter(function (prop) {
-                            // filter out streams with "unknown" subtype - causes errors on some devices
-                            return prop.subtype !== "Unknown";
-                        }).sort(function (propA, propB) {
-                            // sort properties by resolution
-                            return propB.width - propA.width;
-                        });
-
-                        var maxResProps = deviceProps[0];
-
-                        controller.setMediaStreamPropertiesAsync(Windows.Media.Capture.MediaStreamType.videoRecord, maxResProps).done(function () {
-                            capturePreview.src = URL.createObjectURL(capture);
-                            // handle orientation change
-                            rotateVideoOnOrientationChange = true;
-                            capturePreview.onloadeddata = function () {
-                                updatePreviewForRotation();
-                            };
-                            // add event handler - will not work anyway
-                            window.addEventListener("orientationchange", updatePreviewForRotation, false);
-
-                            capturePreview.play();
-
-                            // Insert preview frame and controls into page
-                            document.body.appendChild(capturePreview);
-                            document.body.appendChild(capturePreviewAlignmentMark);
-                            document.body.appendChild(captureCancelButton);
-
-                            startBarcodeSearch(maxResProps.width, maxResProps.height);
-                        });
+                    var backCameras = cameras.filter(function (camera) {
+                        return camera.enclosureLocation.panel === Devices.Panel.back;
                     });
+
+                    // If there is back cameras, return the id of the first,
+                    // otherwise take the first available device's id
+                    return (backCameras[0] || cameras[0]).id;
                 });
             }
-        }
+            return findCamera()
+            .then(function (id) {
+                var captureSettings = new Windows.Media.Capture.MediaCaptureInitializationSettings();
+                captureSettings.streamingCaptureMode = Windows.Media.Capture.StreamingCaptureMode.video;
+                captureSettings.photoCaptureSource = Windows.Media.Capture.PhotoCaptureSource.videoPreview;
+                captureSettings.videoDeviceId = id;
 
-        /**
-         * Starts barcode search process, implemented in WinRTBarcodeReader.winmd library
-         * Calls success callback, when barcode found.
-         */
-        function startBarcodeSearch(width, height) {
+                capture = new Windows.Media.Capture.MediaCapture();
+                return capture.initializeAsync(captureSettings);
+            })
+            .then(function () {
 
-            reader = new WinRTBarcodeReader.Reader();
-            reader.init(capture, width, height);
-            reader.readCode().done(function (result) {
-                destroyPreview();
-                success({ text: result && result.text, format: result && result.barcodeFormat, cancelled: !result });
-            }, function (err) {
-                destroyPreview();
-                fail(err);
+                var controller = capture.videoDeviceController;
+                var deviceProps = controller.getAvailableMediaStreamProperties(Windows.Media.Capture.MediaStreamType.videoRecord);
+
+                deviceProps = Array.prototype.slice.call(deviceProps);
+                deviceProps = deviceProps.filter(function (prop) {
+                    // filter out streams with "unknown" subtype - causes errors on some devices
+                    return prop.subtype !== "Unknown";
+                }).sort(function (propA, propB) {
+                    // sort properties by resolution
+                    return propB.width - propA.width;
+                });
+
+                var maxResProps = deviceProps[0];
+                return controller.setMediaStreamPropertiesAsync(Windows.Media.Capture.MediaStreamType.videoRecord, maxResProps)
+                .then(function () {
+                    return {
+                        capture: capture,
+                        width: maxResProps.width,
+                        height: maxResProps.height
+                    };
+                });
+            })
+            .then(function (captureSettings) {
+
+                capturePreview.msZoom = true;
+                capturePreview.src = URL.createObjectURL(capture);
+                // handle orientation change
+                rotateVideoOnOrientationChange = true;
+                capturePreview.play();
+
+                // Insert preview frame and controls into page
+                document.body.appendChild(capturePreviewFrame);
+
+                return setupFocus(captureSettings.capture.videoDeviceController.focusControl)
+                .then(function () {
+                    // add event handler - will not work anyway
+                    Windows.Graphics.Display.DisplayInformation.getForCurrentView().addEventListener("orientationchanged", updatePreviewForRotation, false);
+                    return updatePreviewForRotation();
+                })
+                .then(function () {
+                    return captureSettings;
+                });
             });
         }
 
@@ -231,15 +430,16 @@ module.exports = {
             // un-handle orientation change
             rotateVideoOnOrientationChange = false;
             // remove event handler
-            window.removeEventListener("orientationchange", updatePreviewForRotation);
+            Windows.Graphics.Display.DisplayInformation.getForCurrentView().removeEventListener("orientationchanged", updatePreviewForRotation, false);
+            document.removeEventListener('backbutton', cancelPreview);
 
             capturePreview.pause();
             capturePreview.src = null;
 
-            [capturePreview, capturePreviewAlignmentMark, captureCancelButton].forEach(function (elem) {
-                elem && document.body.removeChild(elem);
-            });
-            
+            if (capturePreviewFrame) {
+                document.body.removeChild(capturePreviewFrame);
+            }
+
             reader && reader.stop();
             reader = null;
 
@@ -254,13 +454,33 @@ module.exports = {
         function cancelPreview() {
             reader && reader.stop();
         }
-        
-        try {
-            createPreview();
-            startPreview();
-        } catch (ex) {
-            fail(ex);
-        }
+
+        WinJS.Promise.wrap(createPreview())
+        .then(function () {
+            return startPreview();
+        })
+        .then(function (captureSettings) {
+            reader = BarcodeReader.get(captureSettings.capture);
+            reader.init(captureSettings.capture, captureSettings.width, captureSettings.height);
+
+            // Add a small timeout before capturing first frame otherwise
+            // we would get an 'Invalid state' error from 'getPreviewFrameAsync'
+            return WinJS.Promise.timeout(200)
+            .then(function () {
+                return reader.readCode();
+            });
+        })
+        .done(function (result) {
+            destroyPreview();
+            success({
+                text: result && result.text,
+                format: result && BARCODE_FORMAT[result.barcodeFormat],
+                cancelled: !result
+            });
+        }, function (error) {
+            destroyPreview();
+            fail(error);
+        });
     },
 
     /**
