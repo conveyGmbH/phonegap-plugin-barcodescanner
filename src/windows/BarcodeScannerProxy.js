@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) Microsoft Open Technologies, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
@@ -241,7 +241,11 @@ module.exports = {
                     displayInformation = Windows.Graphics.Display.DisplayInformation.getForCurrentView();
                 }
                 var currentOrientation = (displayInformation && displayInformation.currentOrientation);
-                var nativeOrientation = (displayInformation && displayInformation.nativeOrientation);
+
+                // native orientation does not work as expected :(
+                //var nativeOrientation = (displayInformation && displayInformation.nativeOrientation);
+                var nativeOrientation = Windows.Graphics.Display.DisplayOrientations.landscape;
+
                 previewMirroring = previewMirroring || capture.getPreviewMirroring();
 
                 // Lookup up the rotation degrees.
