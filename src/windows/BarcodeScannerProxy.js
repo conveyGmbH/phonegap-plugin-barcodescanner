@@ -244,7 +244,7 @@ module.exports = {
                 var nativeOrientation = (displayInformation && displayInformation.nativeOrientation);
                 previewMirroring = previewMirroring || capture.getPreviewMirroring();
 
-                // Lookup up the rotation degrees.  
+                // Lookup up the rotation degrees.
                 rotDegree = videoPreviewRotationLookup(currentOrientation, nativeOrientation, previewMirroring);
 
                 // since "orientationchange" event might not work, poll for changes...
@@ -252,7 +252,7 @@ module.exports = {
             } else {
                 rotDegree = 0;
             }
-            if (typeof prevRotDegree === "undefined" || prevRotDegree !== rotDegree) {
+            if (prevRotDegree !== rotDegree) {
                 //Set the video subtype
                 var rotGUID = "{0xC380465D, 0x2271, 0x428C, {0x9B, 0x83, 0xEC, 0xEA, 0x3B, 0x4A, 0x85, 0xC1}}";
 
@@ -394,7 +394,7 @@ module.exports = {
                     }
 
                     var backCameras = cameras.filter(function (camera) {
-                        return camera.enclosureLocation.panel === Devices.Panel.back;
+                        return (camera.enclosureLocation && camera.enclosureLocation.panel === Devices.Panel.back);
                     });
 
                     // If there is back cameras, return the id of the first,
@@ -441,6 +441,7 @@ module.exports = {
                 capturePreview.msZoom = true;
                 capturePreview.src = URL.createObjectURL(capture);
                 // handle orientation change
+                prevRotDegree = -1;
                 rotateVideoOnOrientationChange = true;
                 capturePreview.play();
 
@@ -531,3 +532,5 @@ module.exports = {
 };
 
 require("cordova/exec/proxy").add("BarcodeScanner", module.exports);
+
+});
