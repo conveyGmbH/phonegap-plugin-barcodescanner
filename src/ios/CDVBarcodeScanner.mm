@@ -926,7 +926,7 @@ parentViewController:(UIViewController*)parentViewController
         [dvc setTorchMode:tm];
         [dvc unlockForConfiguration];
         
-        NSString *btnName = tm == AVCaptureTorchModeOn ? @"icons8FlashOff" : @"icons8FlashOn";
+        NSString *btnName = tm == AVCaptureTorchModeOn ? @"CDVBarcodeScanner.bundle/icons8FlashOff" : @"CDVBarcodeScanner.bundle/icons8FlashOn";
         [switchTorchBtn setImage:[UIImage imageNamed:btnName]];
     }
     else
@@ -992,7 +992,7 @@ parentViewController:(UIViewController*)parentViewController
                     ];
     
     id flipCamera = [[UIBarButtonItem alloc]
-                     initWithImage:[UIImage imageNamed:@"icons8SwitchCamera"]
+                     initWithImage:[UIImage imageNamed:@"CDVBarcodeScanner.bundle/icons8SwitchCamera"]
                      style:UIBarButtonItemStylePlain
                      target:(id)self
                      action:@selector(flipCameraButtonPressed:)
@@ -1009,7 +1009,7 @@ parentViewController:(UIViewController*)parentViewController
     if (processor.inputDevice.hasTorch)
     {
         switchTorchBtn = [[UIBarButtonItem alloc]
-                          initWithImage:[UIImage imageNamed:@"icons8FlashOn"]
+                          initWithImage:[UIImage imageNamed:@"CDVBarcodeScanner.bundle/icons8FlashOn"]
                           style:UIBarButtonItemStylePlain
                           target:(id)self
                           action:@selector(switchTorchOnOff:)
