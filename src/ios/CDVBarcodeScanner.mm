@@ -16,7 +16,7 @@
 // use the all-in-one version of zxing that we built
 //------------------------------------------------------------------------------
 #import "zxing-all-in-one.h"
-#import <Cordova/CDVPlugin.h>
+#import <Cordova/CDVPlugin+Resources.h>
 
 
 //------------------------------------------------------------------------------
@@ -237,6 +237,15 @@
     [self.commandDelegate sendPluginResult:result callbackId:callback];
 }
 
+// Delegate for camera permission UIAlertView
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    // If Settings button (on iOS 8), open the settings app
+    if (buttonIndex == 1) {
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
+    }
+}
+
 @end
 
 //------------------------------------------------------------------------------
@@ -433,15 +442,36 @@ parentViewController:(UIViewController*)parentViewController
     else {
         self.inputDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
     }
-
     if (!self.inputDevice) return @"unable to obtain video capture device";
     
     AVCaptureDeviceInput* input = [AVCaptureDeviceInput deviceInputWithDevice:self.inputDevice error:&error];
-    if (!input) return @"unable to obtain video capture device input";
+    if (!input) {
+        // Validate the app has permission to access the camera
+        if ([AVCaptureDevice respondsToSelector:@selector(authorizationStatusForMediaType:)]) {
+            AVAuthorizationStatus authStatus = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+            if (authStatus == AVAuthorizationStatusDenied ||
+                authStatus == AVAuthorizationStatusRestricted) {
+                CDVBarcodeScanner *thePlugin = self.plugin;
+                // If iOS 8+, offer a link to the Settings app
+                NSString *currentSysVers = [[UIDevice currentDevice] systemVersion]
+                ,        *settingsButton = ([currentSysVers compare:@"8.0" options:NSNumericSearch] != NSOrderedAscending) ?
+                [thePlugin pluginLocalizedString:@"Settings"] : nil;
+                
+                // Denied; show an alert
+                [[[UIAlertView alloc] initWithTitle:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"]
+                                            message:[thePlugin pluginLocalizedString:@"NoAccess"]
+                                           delegate:thePlugin
+                                  cancelButtonTitle:[thePlugin pluginLocalizedString:@"OK"]
+                                  otherButtonTitles:settingsButton, nil] show];
+                return [thePlugin pluginLocalizedString:@"NoAccess"];
+            }
+        }
+        return @"unable to obtain video capture device input";
+    }
     
     AVCaptureVideoDataOutput* output = [[AVCaptureVideoDataOutput alloc] init];
     if (!output) return @"unable to obtain video capture output";
-    
+
     NSDictionary* videoOutputSettings = [NSDictionary
                                          dictionaryWithObject:[NSNumber numberWithInt:kCVPixelFormatType_32BGRA]
                                          forKey:(id)kCVPixelBufferPixelFormatTypeKey

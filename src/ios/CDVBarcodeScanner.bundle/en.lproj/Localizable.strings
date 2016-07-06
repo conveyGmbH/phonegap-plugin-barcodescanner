@@ -1,0 +1,10 @@
+/*
+ Localizable.strings
+ CDVBarcodeScanner
+ 
+ Created by convey on 06.07.16.
+ */
+
+"NoAccess" = "Access to the camera has been prohibited; please enable it in Settings to continue.";
+"OK"       = "OK";
+"Settings" = "Settings";
