@@ -178,23 +178,23 @@ module.exports = {
                             break;
                         case Windows.Graphics.Display.DisplayOrientations.landscapeFlipped:
                             if (counterclockwise) {
-                                degreesToRotate = 270;
+                                degreesToRotate = Windows.Media.Capture.VideoRotation.clockwise270Degrees;
                             } else {
-                                degreesToRotate = 90;
+                                degreesToRotate = Windows.Media.Capture.VideoRotation.clockwise90Degrees;
                             }
                             break;
                         case Windows.Graphics.Display.DisplayOrientations.portraitFlipped:
-                            degreesToRotate = 180;
+                            degreesToRotate = Windows.Media.Capture.VideoRotation.clockwise180Degrees;
                             break;
                         case Windows.Graphics.Display.DisplayOrientations.landscape:
                             if (counterclockwise) {
-                                degreesToRotate = 90;
+                                degreesToRotate = Windows.Media.Capture.VideoRotation.clockwise90Degrees;
                             } else {
-                                degreesToRotate = 270;
+                                degreesToRotate = Windows.Media.Capture.VideoRotation.clockwise270Degrees;
                             }
                             break;
                         default:
-                            degreesToRotate = 0;
+                            degreesToRotate = Windows.Media.Capture.VideoRotation.none;
                             break;
                     }
                     break;
@@ -206,23 +206,23 @@ module.exports = {
                             break;
                         case Windows.Graphics.Display.DisplayOrientations.portrait:
                             if (counterclockwise) {
-                                degreesToRotate = 270;
+                                degreesToRotate = Windows.Media.Capture.VideoRotation.clockwise270Degrees;
                             } else {
-                                degreesToRotate = 90;
+                                degreesToRotate = Windows.Media.Capture.VideoRotation.clockwise90Degrees;
                             }
                             break;
                         case Windows.Graphics.Display.DisplayOrientations.landscapeFlipped:
-                            degreesToRotate = 180;
+                            degreesToRotate = Windows.Media.Capture.VideoRotation.clockwise180Degrees;
                             break;
                         case Windows.Graphics.Display.DisplayOrientations.portraitFlipped:
                             if (counterclockwise) {
-                                degreesToRotate = 90;
+                                degreesToRotate = Windows.Media.Capture.VideoRotation.clockwise90Degrees;
                             } else {
-                                degreesToRotate = 270;
+                                degreesToRotate = Windows.Media.Capture.VideoRotation.clockwise270Degrees;
                             }
                             break;
                         default:
-                            degreesToRotate = 0;
+                            degreesToRotate = Windows.Media.Capture.VideoRotation.none;
                             break;
                     }
                     break;
@@ -251,24 +251,14 @@ module.exports = {
                 // Lookup up the rotation degrees.
                 rotDegree = videoPreviewRotationLookup(currentOrientation, nativeOrientation, previewMirroring);
 
+
                 // since "orientationchange" event might not work, poll for changes...
                 window.setTimeout(updatePreviewForRotation, 500);
             } else {
-                rotDegree = 0;
+                rotDegree = Windows.Media.Capture.VideoRotation.none;
             }
             if (prevRotDegree !== rotDegree) {
-                //Set the video subtype
-                var rotGUID = "{0xC380465D, 0x2271, 0x428C, {0x9B, 0x83, 0xEC, 0xEA, 0x3B, 0x4A, 0x85, 0xC1}}";
-
-                // rotate the preview video
-                var videoEncodingProperties = capture.videoDeviceController.getMediaStreamProperties(Windows.Media.Capture.MediaStreamType.videoPreview);
-                if (videoEncodingProperties) {
-                    if (videoEncodingProperties.properties.hasKey(rotGUID)) {
-                        videoEncodingProperties.properties.remove(rotGUID);
-                    }
-                    videoEncodingProperties.properties.insert(rotGUID, rotDegree);
-                    ret = capture.videoDeviceController.setMediaStreamPropertiesAsync(Windows.Media.Capture.MediaStreamType.videoPreview, videoEncodingProperties);
-                }
+				capture.setPreviewRotation(rotDegree);
                 prevRotDegree = rotDegree;
             }
             return ret;
