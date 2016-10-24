@@ -6291,7 +6291,7 @@ std::vector<std::vector<Ref<FinderPattern> > > MultiFinderPatternFinder::selectB
   *  - feature similar module sizes
   *  - are placed in a distance so the estimated module count is within the QR specification
   *  - have similar distance between upper left/right and left top/bottom finder patterns
-  *  - form a triangle with 90Â° angle (checked by comparing top right/bottom left distance
+  *  - form a triangle with 90° angle (checked by comparing top right/bottom left distance
   *    with pythagoras)
   *
   * Note: we allow each point to be used for more than one code region: this might seem
@@ -6343,7 +6343,7 @@ std::vector<std::vector<Ref<FinderPattern> > > MultiFinderPatternFinder::selectB
         if (vABBC >= 0.1f) {
           continue;
         }
-        // Calculate the diagonal length by assuming a 90Â° angle at topleft
+        // Calculate the diagonal length by assuming a 90° angle at topleft
         float dCpy = (float) sqrt(dA * dA + dB * dB);
         // Compare to the real distance in %
         float vPyC = abs((dC - dCpy) / std::min(dC, dCpy));
@@ -10048,7 +10048,7 @@ namespace {int GB2312_SUBSET = 1;}
 /*
  base64.cpp and base64.h ([here: just the encoding part!]
  
- Copyright (C) 2004-2008 RenÃ© Nyffenegger
+ Copyright (C) 2004-2008 René Nyffenegger
  
  This source code is provided 'as-is', without any express or implied
  warranty. In no event will the author be held liable for any damages
@@ -10068,7 +10068,7 @@ namespace {int GB2312_SUBSET = 1;}
  
  3. This notice may not be removed or altered from any source distribution.
  
- RenÃ© Nyffenegger rene.nyffenegger@adp-gmbh.ch
+ René Nyffenegger rene.nyffenegger@adp-gmbh.ch
  http://www.adp-gmbh.ch/cpp/common/base64.html
  */
 static const std::string base64_chars =
@@ -10132,7 +10132,7 @@ void DecodedBitStreamParser::append(std::string &result,
 #ifdef kPrefixBinary
     if (result.find(kPrefixBinary) == 0) { // prefix has to be found - at the beginning
         // here the QR-code is multipart (prefix ends with plain alphanumerics), so result already contains that prefix)
-        if (result.length() > kPrefixLength) { // can be longer than total prefix-length (some more alphanimeric character(s) following)
+        if (result.length() > kPrefixLength) { // can be longer than total prefix-length (some more alphanumeric character(s) following)
             // these extra chars must be moved from the end of intermediate result to beginning of bufIn, so they're included in base64
             size_t nTmp = result.length() - kPrefixLength;
             string tmpStr = result.substr(kPrefixLength, nTmp);
@@ -10146,6 +10146,15 @@ void DecodedBitStreamParser::append(std::string &result,
             result.append(base64_encode(bufIn, nIn));
         }
         return;
+    } else if (nIn >= kPrefixLength) { // but maybe the QR-code is *not* multipart, all contents comes at once
+        size_t i
+             , l = sizeof(kPrefixBinary) - 1; // without 0-terminator
+        for (i = 0; i < nIn && i < l && bufIn[i] == kPrefixBinary[i]; i++);
+        if (i == l) {
+            result.append((const char *)bufIn, kPrefixLength);
+            result.append(base64_encode(bufIn + kPrefixLength, nIn - kPrefixLength));
+            return;
+        }
     }
 #endif
 
