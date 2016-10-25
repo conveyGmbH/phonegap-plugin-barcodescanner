@@ -357,7 +357,25 @@ namespace ZXing.QrCode.Internal
                   {
                      result.Append(Convert.ToBase64String(readBytes));
                   }
-               } 
+               }
+               else if (count >= kPrefixLength)
+               {
+                  int i, l = kPrefixBinary.Length;
+                  for (i = 0; i < count && i < l && readBytes[i] == kPrefixBinary[i]; i++)
+                  {
+                  }
+                  if (i == l)
+                  {
+                     result.Append(Encoding.GetEncoding(encoding).GetString(readBytes, 0, kPrefixLength));
+                     byte[] tmpbuf = new byte[count - kPrefixLength];
+                     Buffer.BlockCopy(readBytes, kPrefixLength, tmpbuf, 0, count - kPrefixLength);
+                     result.Append(Convert.ToBase64String(tmpbuf));
+                  }
+                  else
+                  {
+                     result.Append(Encoding.GetEncoding(encoding).GetString(readBytes, 0, readBytes.Length));
+                  }
+               }
                else
                {
                   result.Append(Encoding.GetEncoding(encoding).GetString(readBytes, 0, readBytes.Length));
