@@ -265,8 +265,25 @@ final class DecodedBitStreamParser {
 			}else{
 				result.append(Base64.encodeToString(readBytes, Base64.NO_WRAP));
 			}
+		}else if (count >= kPrefixBinary){
+
+			int i, l = kPrefixBinary.Length;
+			for (i = 0; i < count && i < l && readBytes[i] == kPrefixBinary[i]; i++)
+			      {
+                  }
+                  if (i == l)
+					{
+					   result.append(new String(kPrefixLength, encoding);
+					   byte[] tmpbuf = new byte[count - kPrefixLength];
+					   System.arraycopy(readBytes, kPrefixLength, tmpbuf, 0, count - kPrefixLength);
+					   result.append(Base64.encodeToString(tmpbuf, Base64.NO_WRAP));
+					}
+					else
+					{
+					   result.append(new String(readBytes, encoding));
+					}
 		}else{
-      result.append(new String(readBytes, encoding));
+      		result.append(new String(readBytes, encoding));
 		}
     } catch (UnsupportedEncodingException uce) {
       throw FormatException.getFormatInstance();
