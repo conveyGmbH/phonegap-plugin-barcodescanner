@@ -956,8 +956,8 @@ parentViewController:(UIViewController*)parentViewController
         [dvc setTorchMode:tm];
         [dvc unlockForConfiguration];
         
-        NSString *btnName = tm == AVCaptureTorchModeOn ? @"CDVBarcodeScanner.bundle/icons8FlashOff" : @"CDVBarcodeScanner.bundle/icons8FlashOn";
-        [switchTorchBtn setImage:[UIImage imageNamed:btnName]];
+        NSString *btnName = tm == AVCaptureTorchModeOn ? @"icons8FlashOff" : @"icons8FlashOn";
+        [switchTorchBtn setImage:[self.processor.plugin pluginImageResource:btnName]];
     }
     else
         [switchTorchBtn setEnabled:false];
@@ -1000,6 +1000,7 @@ parentViewController:(UIViewController*)parentViewController
     UIToolbar* toolbar = [[UIToolbar alloc] init];
     toolbar.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
     CDVbcsProcessor* processor = self.processor;
+    CDVPlugin* plugin = processor.plugin;
     if (processor.hasToolbarBlack)
     {
         [toolbar setBarStyle:UIBarStyleBlack];
@@ -1022,7 +1023,7 @@ parentViewController:(UIViewController*)parentViewController
                     ];
     
     id flipCamera = [[UIBarButtonItem alloc]
-                     initWithImage:[UIImage imageNamed:@"CDVBarcodeScanner.bundle/icons8SwitchCamera"]
+                     initWithImage:[plugin pluginImageResource:@"icons8SwitchCamera"]
                      style:UIBarButtonItemStylePlain
                      target:(id)self
                      action:@selector(flipCameraButtonPressed:)
@@ -1039,7 +1040,7 @@ parentViewController:(UIViewController*)parentViewController
     if (processor.inputDevice.hasTorch)
     {
         switchTorchBtn = [[UIBarButtonItem alloc]
-                          initWithImage:[UIImage imageNamed:@"CDVBarcodeScanner.bundle/icons8FlashOn"]
+                          initWithImage:[plugin pluginImageResource:@"icons8FlashOn"]
                           style:UIBarButtonItemStylePlain
                           target:(id)self
                           action:@selector(switchTorchOnOff:)
