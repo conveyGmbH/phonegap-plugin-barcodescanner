@@ -52,7 +52,7 @@
       <uses-feature android:name="android.hardware.camera" android:required="true"/>
     </config-file>
     <framework src="src/android/barcodescanner.gradle" custom="true" type="gradleReference"/>
-    <resource-file src="src/android/com.google.zxing.client.android.captureactivity.jar" target="libs"/>
+    <resource-file src="src/android/com.google.zxing.client.android.captureactivity.jar" target-dir="libs"/>
     
             <source-file src="src/android/LibraryProject/res/drawable/launcher_icon.png" target-dir="res/drawable"/>
             <source-file src="src/android/LibraryProject/res/drawable/share_via_barcode.png" target-dir="res/drawable"/>
