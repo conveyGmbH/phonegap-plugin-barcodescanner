@@ -43,10 +43,14 @@ public class BarcodeScanner extends CordovaPlugin {
     private static final String TEXT = "text";
     private static final String DATA = "data";
     private static final String TYPE = "type";
-    private static final String SCAN_INTENT = "com.google.zxing.client.android.SCAN";
-    private static final String ENCODE_DATA = "ENCODE_DATA";
-    private static final String ENCODE_TYPE = "ENCODE_TYPE";
-    private static final String ENCODE_INTENT = "com.phonegap.plugins.barcodescanner.ENCODE";
+    private static final String PREFER_FRONTCAMERA = "preferFrontCamera";
+    private static final String ORIENTATION = "orientation";
+    private static final String SHOW_FLIP_CAMERA_BUTTON = "showFlipCameraButton";
+    private static final String RESULTDISPLAY_DURATION = "resultDisplayDuration";
+    private static final String SHOW_TORCH_BUTTON = "showTorchButton";
+    private static final String TORCH_ON = "torchOn";
+    private static final String FORMATS = "formats";
+    private static final String PROMPT = "prompt";
     private static final String TEXT_TYPE = "TEXT_TYPE";
     private static final String EMAIL_TYPE = "EMAIL_TYPE";
     private static final String PHONE_TYPE = "PHONE_TYPE";
@@ -152,13 +156,42 @@ public class BarcodeScanner extends CordovaPlugin {
                             continue;
                         }
 
-                    } catch(JSONException e) {
-                        Log.i("CordovaLog", e.getLocalizedMessage());
-                        continue;
+                        names = obj.names();
+                        for (int j = 0; j < names.length(); j++) {
+                            try {
+                                key = names.getString(j);
+                                value = obj.get(key);
+
+                                if (value instanceof Integer) {
+                                    intentScan.putExtra(key, (Integer) value);
+                                } else if (value instanceof String) {
+                                    intentScan.putExtra(key, (String) value);
+                                }
+
+                            } catch (JSONException e) {
+                                Log.i("CordovaLog", e.getLocalizedMessage());
+                            }
+                        }
+
+                        intentScan.putExtra(Intents.Scan.CAMERA_ID, obj.optBoolean(PREFER_FRONTCAMERA, false) ? 1 : 0);
+                        intentScan.putExtra(Intents.Scan.SHOW_FLIP_CAMERA_BUTTON, obj.optBoolean(SHOW_FLIP_CAMERA_BUTTON, false));
+                        intentScan.putExtra(Intents.Scan.SHOW_TORCH_BUTTON, obj.optBoolean(SHOW_TORCH_BUTTON, false));
+                        intentScan.putExtra(Intents.Scan.TORCH_ON, obj.optBoolean(TORCH_ON, false));
+                        if (obj.has(RESULTDISPLAY_DURATION)) {
+                            intentScan.putExtra(Intents.Scan.RESULT_DISPLAY_DURATION_MS, "" + obj.optLong(RESULTDISPLAY_DURATION));
+                        }
+                        if (obj.has(FORMATS)) {
+                            intentScan.putExtra(Intents.Scan.FORMATS, obj.optString(FORMATS));
+                        }
+                        if (obj.has(PROMPT)) {
+                            intentScan.putExtra(Intents.Scan.PROMPT_MESSAGE, obj.optString(PROMPT));
+                        }
+                        if (obj.has(ORIENTATION)) {
+                            intentScan.putExtra(Intents.Scan.ORIENTATION_LOCK, obj.optString(ORIENTATION));
+                        }
                     }
 
                 }
-            }
 
                 // avoid calling other phonegap apps
                 intentScan.setPackage(that.cordova.getActivity().getApplicationContext().getPackageName());
