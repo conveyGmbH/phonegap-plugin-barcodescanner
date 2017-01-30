@@ -183,20 +183,21 @@ final class FieldParser {
     { "8100", 6},
     { "8101", 10},
     { "8102", 2},
-    { "8110", VARIABLE_LENGTH, 30},
+    { "8110", VARIABLE_LENGTH, 70},
+    { "8200", VARIABLE_LENGTH, 70},
   };
 
   private FieldParser() {
   }
 
-  static String parseFieldsInGeneralPurpose(String rawInformation) throws NotFoundException{
-    if(rawInformation.length() == 0) {
+  static String parseFieldsInGeneralPurpose(String rawInformation) throws NotFoundException {
+    if (rawInformation.isEmpty()) {
       return null;
     }
 
     // Processing 2-digit AIs
 
-    if(rawInformation.length() < 2) {
+    if (rawInformation.length() < 2) {
       throw NotFoundException.getNotFoundInstance();
     }
 
@@ -211,7 +212,7 @@ final class FieldParser {
       }
     }
 
-    if(rawInformation.length() < 3) {
+    if (rawInformation.length() < 3) {
       throw NotFoundException.getNotFoundInstance();
     }
 
@@ -236,7 +237,7 @@ final class FieldParser {
       }
     }
 
-    if(rawInformation.length() < 4) {
+    if (rawInformation.length() < 4) {
       throw NotFoundException.getNotFoundInstance();
     }
 
@@ -254,14 +255,14 @@ final class FieldParser {
     throw NotFoundException.getNotFoundInstance();
   }
 
-  private static String processFixedAI(int aiSize, int fieldSize, String rawInformation) throws NotFoundException{
+  private static String processFixedAI(int aiSize, int fieldSize, String rawInformation) throws NotFoundException {
     if (rawInformation.length() < aiSize) {
       throw NotFoundException.getNotFoundInstance();
     }
 
     String ai = rawInformation.substring(0, aiSize);
 
-    if(rawInformation.length() < aiSize + fieldSize) {
+    if (rawInformation.length() < aiSize + fieldSize) {
       throw NotFoundException.getNotFoundInstance();
     }
 

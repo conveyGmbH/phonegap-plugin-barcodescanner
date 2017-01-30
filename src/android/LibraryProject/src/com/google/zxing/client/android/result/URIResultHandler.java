@@ -17,13 +17,14 @@
 package com.google.zxing.client.android.result;
 
 import com.google.zxing.client.android.LocaleManager;
-import com.google.zxing.client.android.R;
 import com.google.zxing.client.result.ParsedResult;
 import com.google.zxing.client.result.URIParsedResult;
 
 import android.app.Activity;
 
 import java.util.Locale;
+
+import barcodescanner.xservices.nl.barcodescanner.R;
 
 /**
  * Offers appropriate actions for URLS.
@@ -37,16 +38,15 @@ public final class URIResultHandler extends ResultHandler {
     "otpauth:"
   };
 
-  private static int[] buttons;
+  private static final int[] buttons = {
+      R.string.button_open_browser,
+      R.string.button_share_by_email,
+      R.string.button_share_by_sms,
+      R.string.button_search_book_contents,
+  };
 
   public URIResultHandler(Activity activity, ParsedResult result) {
     super(activity, result);
-	buttons = new int[]{
-		  fakeR.getId("string", "button_open_browser"),
-		  fakeR.getId("string", "button_share_by_email"),
-		  fakeR.getId("string", "button_share_by_sms"),
-		  fakeR.getId("string", "button_search_book_contents"),
-    };
   }
 
   @Override
@@ -60,6 +60,11 @@ public final class URIResultHandler extends ResultHandler {
   @Override
   public int getButtonText(int index) {
     return buttons[index];
+  }
+
+  @Override
+  public Integer getDefaultButtonID() {
+    return 0;
   }
 
   @Override
@@ -84,7 +89,7 @@ public final class URIResultHandler extends ResultHandler {
 
   @Override
   public int getDisplayTitle() {
-    return fakeR.getId("string", "result_uri");
+    return R.string.result_uri;
   }
 
   @Override

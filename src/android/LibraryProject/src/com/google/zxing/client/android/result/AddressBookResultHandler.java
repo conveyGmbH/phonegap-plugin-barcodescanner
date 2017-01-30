@@ -16,11 +16,12 @@
 
 package com.google.zxing.client.android.result;
 
-import com.google.zxing.client.android.R;
+import barcodescanner.xservices.nl.barcodescanner.R;
 import com.google.zxing.client.result.AddressBookParsedResult;
 import com.google.zxing.client.result.ParsedResult;
 
 import android.app.Activity;
+import android.graphics.Typeface;
 import android.telephony.PhoneNumberUtils;
 import android.text.Spannable;
 import android.text.SpannableString;
@@ -51,7 +52,12 @@ public final class AddressBookResultHandler extends ResultHandler {
     }
   }
 
-  private static int[] BUTTON_TEXTS;
+  private static final int[] BUTTON_TEXTS = {
+    R.string.button_add_contact,
+    R.string.button_show_map,
+    R.string.button_dial,
+    R.string.button_email,
+  };
 
   private final boolean[] fields;
   private int buttonCount;
@@ -75,25 +81,16 @@ public final class AddressBookResultHandler extends ResultHandler {
 
   public AddressBookResultHandler(Activity activity, ParsedResult result) {
     super(activity, result);
-	BUTTON_TEXTS = new int[]{
-      fakeR.getId("string", "button_add_contact"),
-      fakeR.getId("string", "button_show_map"),
-      fakeR.getId("string", "button_dial"),
-      fakeR.getId("string", "button_email"),
-    };
     AddressBookParsedResult addressResult = (AddressBookParsedResult) result;
     String[] addresses = addressResult.getAddresses();
-    boolean hasAddress = addresses != null && addresses.length > 0 && addresses[0].length() > 0;
     String[] phoneNumbers = addressResult.getPhoneNumbers();
-    boolean hasPhoneNumber = phoneNumbers != null && phoneNumbers.length > 0;
     String[] emails = addressResult.getEmails();
-    boolean hasEmailAddress = emails != null && emails.length > 0;
 
     fields = new boolean[MAX_BUTTON_COUNT];
     fields[0] = true; // Add contact is always available
-    fields[1] = hasAddress;
-    fields[2] = hasPhoneNumber;
-    fields[3] = hasEmailAddress;
+    fields[1] = addresses != null && addresses.length > 0 && addresses[0] != null && !addresses[0].isEmpty();
+    fields[2] = phoneNumbers != null && phoneNumbers.length > 0;
+    fields[3] = emails != null && emails.length > 0;
 
     buttonCount = 0;
     for (int x = 0; x < MAX_BUTTON_COUNT; x++) {
@@ -124,6 +121,7 @@ public final class AddressBookResultHandler extends ResultHandler {
     switch (action) {
       case 0:
         addContact(addressResult.getNames(),
+                   addressResult.getNicknames(),
                    addressResult.getPronunciation(),
                    addressResult.getPhoneNumbers(),
                    addressResult.getPhoneTypes(),
@@ -135,19 +133,18 @@ public final class AddressBookResultHandler extends ResultHandler {
                    address1Type,
                    addressResult.getOrg(),
                    addressResult.getTitle(),
-                   addressResult.getURL(),
-                   addressResult.getBirthday());
+                   addressResult.getURLs(),
+                   addressResult.getBirthday(),
+                   addressResult.getGeo());
         break;
       case 1:
-        String[] names = addressResult.getNames();
-        String title = names != null ? names[0] : null;
-        searchMap(address1, title);
+        searchMap(address1);
         break;
       case 2:
         dialPhone(addressResult.getPhoneNumbers()[0]);
         break;
       case 3:
-        sendEmail(addressResult.getEmails()[0], null, null);
+        sendEmail(addressResult.getEmails(), null, null, null, null);
         break;
       default:
         break;
@@ -174,7 +171,7 @@ public final class AddressBookResultHandler extends ResultHandler {
     int namesLength = contents.length();
 
     String pronunciation = result.getPronunciation();
-    if (pronunciation != null && pronunciation.length() > 0) {
+    if (pronunciation != null && !pronunciation.isEmpty()) {
       contents.append("\n(");
       contents.append(pronunciation);
       contents.append(')');
@@ -186,14 +183,16 @@ public final class AddressBookResultHandler extends ResultHandler {
     String[] numbers = result.getPhoneNumbers();
     if (numbers != null) {
       for (String number : numbers) {
-        ParsedResult.maybeAppend(PhoneNumberUtils.formatNumber(number), contents);
+        if (number != null) {
+          ParsedResult.maybeAppend(PhoneNumberUtils.formatNumber(number), contents);
+        }
       }
     }
     ParsedResult.maybeAppend(result.getEmails(), contents);
-    ParsedResult.maybeAppend(result.getURL(), contents);
+    ParsedResult.maybeAppend(result.getURLs(), contents);
 
     String birthday = result.getBirthday();
-    if (birthday != null && birthday.length() > 0) {
+    if (birthday != null && !birthday.isEmpty()) {
       Date date = parseDate(birthday);
       if (date != null) {
         ParsedResult.maybeAppend(DateFormat.getDateInstance(DateFormat.MEDIUM).format(date.getTime()), contents);
@@ -204,7 +203,7 @@ public final class AddressBookResultHandler extends ResultHandler {
     if (namesLength > 0) {
       // Bold the full name to make it stand out a bit.
       Spannable styled = new SpannableString(contents.toString());
-      styled.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), 0, namesLength, 0);
+      styled.setSpan(new StyleSpan(Typeface.BOLD), 0, namesLength, 0);
       return styled;
     } else {
       return contents.toString();
@@ -213,6 +212,6 @@ public final class AddressBookResultHandler extends ResultHandler {
 
   @Override
   public int getDisplayTitle() {
-    return fakeR.getId("string", "result_address_book");
+    return R.string.result_address_book;
   }
 }

@@ -17,13 +17,6 @@
 #include <stdlib.h>
 #include <iconv.h>
 
-// some specials for QR-codes
-#define kPrefixBinary "#LSAD" // after the prefix comes *real* binary data (to be taken as is and to be base64 encoded)
-                              // has to at least end with alphanumerics, so the QR-Code is multi-part
-#ifdef kPrefixBinary
-#define kPrefixLength 7 // total prefix-lenght can be more, e.g. with "#LSAD01" or "#LSAD02" for sub-types
-#endif
-
 // file: zxing/Exception.h
 
 #ifndef __EXCEPTION_H__
@@ -1292,11 +1285,10 @@ class GreyscaleLuminanceSource : public LuminanceSource {
   int top_;
   int width_;
   int height_;
-  bool inverse_;
 
  public:
   GreyscaleLuminanceSource(unsigned char* greyData, int dataWidth, int dataHeight, int left,
-      int top, int width, int height, bool inverse);
+      int top, int width, int height);
 
   unsigned char* getRow(int y, unsigned char* row);
   unsigned char* getMatrix();

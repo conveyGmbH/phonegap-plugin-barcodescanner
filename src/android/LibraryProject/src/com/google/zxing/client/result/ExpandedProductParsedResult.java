@@ -29,6 +29,9 @@ package com.google.zxing.client.result;
 import java.util.Map;
 
 /**
+ * Represents a parsed result that encodes extended product information as encoded
+ * by the RSS format, like weight, price, dates, etc.
+ *
  * @author Antonio Manuel Benjumea Conde, Servinform, S.A.
  * @author Agustín Delgado, Servinform, S.A.
  */
@@ -37,6 +40,7 @@ public final class ExpandedProductParsedResult extends ParsedResult {
   public static final String KILOGRAM = "KG";
   public static final String POUND = "LB";
 
+  private final String rawText;
   private final String productID;
   private final String sscc;
   private final String lotNumber;
@@ -53,7 +57,8 @@ public final class ExpandedProductParsedResult extends ParsedResult {
   // For AIS that not exist in this object
   private final Map<String,String> uncommonAIs;
 
-  public ExpandedProductParsedResult(String productID,
+  public ExpandedProductParsedResult(String rawText,
+                                     String productID,
                                      String sscc,
                                      String lotNumber,
                                      String productionDate,
@@ -68,6 +73,7 @@ public final class ExpandedProductParsedResult extends ParsedResult {
                                      String priceCurrency,
                                      Map<String,String> uncommonAIs) {
     super(ParsedResultType.PRODUCT);
+    this.rawText = rawText;
     this.productID = productID;
     this.sscc = sscc;
     this.lotNumber = lotNumber;
@@ -85,12 +91,12 @@ public final class ExpandedProductParsedResult extends ParsedResult {
   }
 
   @Override
-  public boolean equals(Object o){
+  public boolean equals(Object o) {
     if (!(o instanceof ExpandedProductParsedResult)) {
       return false;
     }
 
-    ExpandedProductParsedResult other = (ExpandedProductParsedResult)o;
+    ExpandedProductParsedResult other = (ExpandedProductParsedResult) o;
 
     return equalsOrNull(productID, other.productID)
         && equalsOrNull(sscc, other.sscc)
@@ -112,7 +118,7 @@ public final class ExpandedProductParsedResult extends ParsedResult {
   }
 
   @Override
-  public int hashCode(){
+  public int hashCode() {
     int hash = 0;
     hash ^= hashNotNull(productID);
     hash ^= hashNotNull(sscc);
@@ -132,6 +138,10 @@ public final class ExpandedProductParsedResult extends ParsedResult {
 
   private static int hashNotNull(Object o) {
     return o == null ? 0 : o.hashCode();
+  }
+
+  public String getRawText() {
+    return rawText;
   }
 
   public String getProductID() {
@@ -192,6 +202,6 @@ public final class ExpandedProductParsedResult extends ParsedResult {
 
   @Override
   public String getDisplayResult() {
-    return String.valueOf(productID);
+    return String.valueOf(rawText);
   }
 }
