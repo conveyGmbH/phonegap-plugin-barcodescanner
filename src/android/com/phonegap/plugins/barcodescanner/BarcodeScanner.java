@@ -12,16 +12,23 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.os.Bundle;
 import android.util.Log;
+import android.content.pm.PackageManager;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
+import org.apache.cordova.PermissionHelper;
+
+import com.google.zxing.client.android.CaptureActivity;
+import com.google.zxing.client.android.encode.EncodeActivity;
+import com.google.zxing.client.android.Intents;
 
 import android.util.Log;
-
 /**
  * This calls out to the ZXing barcode reader and returns the result.
  *
@@ -48,6 +55,9 @@ public class BarcodeScanner extends CordovaPlugin {
 
     private static final String LOG_TAG = "BarcodeScanner";
 
+    private String [] permissions = { Manifest.permission.CAMERA };
+
+    private JSONArray requestArgs;
     private CallbackContext callbackContext;
 
     /**
@@ -75,6 +85,7 @@ public class BarcodeScanner extends CordovaPlugin {
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) {
         this.callbackContext = callbackContext;
+        this.requestArgs = args;
 
         if (action.equals(ENCODE)) {
             JSONObject obj = args.optJSONObject(0);
@@ -98,7 +109,13 @@ public class BarcodeScanner extends CordovaPlugin {
                 return true;
             }
         } else if (action.equals(SCAN)) {
-            scan(args);
+
+            //android permission auto add
+            if(!hasPermisssion()) {
+              requestPermissions(0);
+            } else {
+              scan(args);
+            }
         } else {
             return false;
         }
@@ -166,7 +183,7 @@ public class BarcodeScanner extends CordovaPlugin {
      */
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
-        if (requestCode == REQUEST_CODE) {
+        if (requestCode == REQUEST_CODE && this.callbackContext != null) {
             if (resultCode == Activity.RESULT_OK) {
                 JSONObject obj = new JSONObject();
                 try {
