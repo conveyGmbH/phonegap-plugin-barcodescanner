@@ -1,0 +1,14 @@
+/ASCIIEncoder.class
+/Base256Encoder.class
+/C40Encoder.class
+/DataMatrixSymbolInfo144.class
+/DefaultPlacement.class
+/EdifactEncoder.class
+/Encoder.class
+/EncoderContext.class
+/ErrorCorrection.class
+/HighLevelEncoder.class
+/SymbolInfo.class
+/SymbolShapeHint.class
+/TextEncoder.class
+/X12Encoder.class
