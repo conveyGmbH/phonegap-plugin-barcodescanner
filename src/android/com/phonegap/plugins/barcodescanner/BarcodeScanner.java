@@ -48,9 +48,6 @@ public class BarcodeScanner extends CordovaPlugin {
 
     private static final String LOG_TAG = "BarcodeScanner";
 
-    private String [] permissions = { Manifest.permission.CAMERA };
-
-    private JSONArray requestArgs;
     private CallbackContext callbackContext;
 
     /**
@@ -78,7 +75,6 @@ public class BarcodeScanner extends CordovaPlugin {
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) {
         this.callbackContext = callbackContext;
-        this.requestArgs = args;
 
         if (action.equals(ENCODE)) {
             JSONObject obj = args.optJSONObject(0);
@@ -102,13 +98,7 @@ public class BarcodeScanner extends CordovaPlugin {
                 return true;
             }
         } else if (action.equals(SCAN)) {
-
-            //android permission auto add
-            if(!hasPermisssion()) {
-              requestPermissions(0);
-            } else {
-              scan(args);
-            }
+            scan(args);
         } else {
             return false;
         }
@@ -118,49 +108,37 @@ public class BarcodeScanner extends CordovaPlugin {
     /**
      * Starts an intent to scan and decode a barcode.
      */
-    public void scan(final JSONArray args) {
+    public void scan(JSONArray args) {
+        Intent intentScan = new Intent(SCAN_INTENT);
+        intentScan.addCategory(Intent.CATEGORY_DEFAULT);
 
-        final CordovaPlugin that = this;
+        // add config as intent extras
+        if(args.length() > 0) {
 
-        cordova.getThreadPool().execute(new Runnable() {
-            public void run() {
+            JSONObject obj;
+            JSONArray names;
+            String key;
+            Object value;
 
-                Intent intentScan = new Intent(that.cordova.getActivity().getBaseContext(), CaptureActivity.class);
-                intentScan.setAction(Intents.Scan.ACTION);
-                intentScan.addCategory(Intent.CATEGORY_DEFAULT);
+            for(int i=0; i<args.length(); i++) {
 
-                // add config as intent extras
-                if (args.length() > 0) {
+                try {
+                    obj = args.getJSONObject(i);
+                } catch(JSONException e) {
+                    Log.i("CordovaLog", e.getLocalizedMessage());
+                    continue;
+                }
 
-                    JSONObject obj;
-                    JSONArray names;
-                    String key;
-                    Object value;
+                names = obj.names();
+                for(int j=0; j<names.length(); j++) {
+                    try {
+                        key = names.getString(j);
+                        value = obj.get(key);
 
-                    for (int i = 0; i < args.length(); i++) {
-
-                        try {
-                            obj = args.getJSONObject(i);
-                        } catch (JSONException e) {
-                            Log.i("CordovaLog", e.getLocalizedMessage());
-                            continue;
-                        }
-
-                        names = obj.names();
-                        for (int j = 0; j < names.length(); j++) {
-                            try {
-                                key = names.getString(j);
-                                value = obj.get(key);
-
-                                if (value instanceof Integer) {
-                                    intentScan.putExtra(key, (Integer) value);
-                                } else if (value instanceof String) {
-                                    intentScan.putExtra(key, (String) value);
-                                }
-
-                            } catch (JSONException e) {
-                                Log.i("CordovaLog", e.getLocalizedMessage());
-                            }
+                        if(value instanceof Integer) {
+                            intentScan.putExtra(key, (Integer)value);
+                        } else if(value instanceof String) {
+                            intentScan.putExtra(key, (String)value);
                         }
 
                     } catch(JSONException e) {
@@ -188,7 +166,7 @@ public class BarcodeScanner extends CordovaPlugin {
      */
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
-        if (requestCode == REQUEST_CODE && this.callbackContext != null) {
+        if (requestCode == REQUEST_CODE) {
             if (resultCode == Activity.RESULT_OK) {
                 JSONObject obj = new JSONObject();
                 try {
@@ -233,67 +211,4 @@ public class BarcodeScanner extends CordovaPlugin {
 
         this.cordova.getActivity().startActivity(intentEncode);
     }
-
-    /**
-     * check application's permissions
-     */
-   public boolean hasPermisssion() {
-       for(String p : permissions)
-       {
-           if(!PermissionHelper.hasPermission(this, p))
-           {
-               return false;
-           }
-       }
-       return true;
-   }
-
-    /**
-     * We override this so that we can access the permissions variable, which no longer exists in
-     * the parent class, since we can't initialize it reliably in the constructor!
-     *
-     * @param requestCode The code to get request action
-     */
-   public void requestPermissions(int requestCode)
-   {
-       PermissionHelper.requestPermissions(this, requestCode, permissions);
-   }
-
-   /**
-   * processes the result of permission request
-   *
-   * @param requestCode The code to get request action
-   * @param permissions The collection of permissions
-   * @param grantResults The result of grant
-   */
-  public void onRequestPermissionResult(int requestCode, String[] permissions,
-                                         int[] grantResults) throws JSONException
-   {
-       PluginResult result;
-       for (int r : grantResults) {
-           if (r == PackageManager.PERMISSION_DENIED) {
-               Log.d(LOG_TAG, "Permission Denied!");
-               result = new PluginResult(PluginResult.Status.ILLEGAL_ACCESS_EXCEPTION);
-               this.callbackContext.sendPluginResult(result);
-               return;
-           }
-       }
-
-       switch(requestCode)
-       {
-           case 0:
-               scan(this.requestArgs);
-               break;
-       }
-   }
-
-    /**
-     * This plugin launches an external Activity when the camera is opened, so we
-     * need to implement the save/restore API in case the Activity gets killed
-     * by the OS while it's in the background.
-     */
-    public void onRestoreStateForActivityResult(Bundle state, CallbackContext callbackContext) {
-        this.callbackContext = callbackContext;
-    }
-
 }
