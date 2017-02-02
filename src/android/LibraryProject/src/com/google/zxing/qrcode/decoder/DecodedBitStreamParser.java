@@ -183,7 +183,7 @@ final class DecodedBitStreamParser {
 
     try {
       result.append(new String(buffer, StringUtils.GB2312));
-    } catch (UnsupportedEncodingException uee) {
+    } catch (UnsupportedEncodingException ignored) {
       throw FormatException.getFormatInstance();
     }
   }
@@ -219,7 +219,7 @@ final class DecodedBitStreamParser {
     // Shift_JIS may not be supported in some environments:
     try {
       result.append(new String(buffer, StringUtils.SHIFT_JIS));
-    } catch (UnsupportedEncodingException uee) {
+    } catch (UnsupportedEncodingException ignored) {
       throw FormatException.getFormatInstance();
     }
   }
@@ -265,15 +265,15 @@ final class DecodedBitStreamParser {
 			}else{
 				result.append(Base64.encodeToString(readBytes, Base64.NO_WRAP));
 			}
-		}else if (count >= kPrefixBinary){
+		}else if (count >= kPrefixLength){
 
-			int i, l = kPrefixBinary.Length;
-			for (i = 0; i < count && i < l && readBytes[i] == kPrefixBinary[i]; i++)
+			int i, l = kPrefixBinary.length();
+			for (i = 0; i < count && i < l && readBytes[i] == kPrefixBinary.charAt(i); i++)
 			      {
                   }
                   if (i == l)
 					{
-					   result.append(new String(kPrefixLength, encoding);
+					   result.append(new String(readBytes, encoding));
 					   byte[] tmpbuf = new byte[count - kPrefixLength];
 					   System.arraycopy(readBytes, kPrefixLength, tmpbuf, 0, count - kPrefixLength);
 					   result.append(Base64.encodeToString(tmpbuf, Base64.NO_WRAP));
