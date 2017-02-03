@@ -86,7 +86,7 @@
 - (void)captureOutput:(AVCaptureOutput*)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection*)connection;
 - (NSString*)formatStringFrom:(zxing::BarcodeFormat)format;
 - (UIImage*)getImageFromSample:(CMSampleBufferRef)sampleBuffer;
-- (zxing::Ref<zxing::LuminanceSource>) getLuminanceSourceFromSample:(CMSampleBufferRef)sampleBuffer imageBytes:(uint8_t**)ptr;
+- (zxing::Ref<zxing::LuminanceSource>) getLuminanceSourceFromSample:(CMSampleBufferRef)sampleBuffer imageArr:(zxing::ArrayRef<char>&)greyArr;
 - (UIImage*) getImageFromLuminanceSource:(zxing::LuminanceSource*)luminanceSource;
 - (void)dumpImage:(UIImage*)image;
 @end
@@ -546,24 +546,32 @@ parentViewController:(UIViewController*)parentViewController
     // LuminanceSource is pretty dumb; we have to give it a pointer to
     // a byte array, but then can't get it back out again.  We need to
     // get it back to free it.  Saving it in imageBytes.
-    uint8_t* imageBytes;
+    ArrayRef<char> imageArr;
     
     //        NSTimeInterval timeStart = [NSDate timeIntervalSinceReferenceDate];
     
     try {
         DecodeHints decodeHints;
-        decodeHints.addFormat(BarcodeFormat_QR_CODE);
-        decodeHints.addFormat(BarcodeFormat_DATA_MATRIX);
-        decodeHints.addFormat(BarcodeFormat_UPC_E);
-        decodeHints.addFormat(BarcodeFormat_UPC_A);
-        decodeHints.addFormat(BarcodeFormat_EAN_8);
-        decodeHints.addFormat(BarcodeFormat_EAN_13);
-        decodeHints.addFormat(BarcodeFormat_CODE_128);
-        decodeHints.addFormat(BarcodeFormat_CODE_39);
-        decodeHints.addFormat(BarcodeFormat_ITF);
+        decodeHints.addFormat(zxing::BarcodeFormat::AZTEC);
+        decodeHints.addFormat(zxing::BarcodeFormat::CODABAR);
+        decodeHints.addFormat(zxing::BarcodeFormat::CODE_39);
+        decodeHints.addFormat(zxing::BarcodeFormat::CODE_93);
+        decodeHints.addFormat(zxing::BarcodeFormat::CODE_128);
+        decodeHints.addFormat(zxing::BarcodeFormat::DATA_MATRIX);
+        decodeHints.addFormat(zxing::BarcodeFormat::EAN_8);
+        decodeHints.addFormat(zxing::BarcodeFormat::EAN_13);
+        decodeHints.addFormat(zxing::BarcodeFormat::ITF);
+        decodeHints.addFormat(zxing::BarcodeFormat::MAXICODE);
+        decodeHints.addFormat(zxing::BarcodeFormat::PDF_417);
+        decodeHints.addFormat(zxing::BarcodeFormat::QR_CODE);
+        decodeHints.addFormat(zxing::BarcodeFormat::RSS_14);
+        decodeHints.addFormat(zxing::BarcodeFormat::RSS_EXPANDED);
+        decodeHints.addFormat(zxing::BarcodeFormat::UPC_A);
+        decodeHints.addFormat(zxing::BarcodeFormat::UPC_E);
+        decodeHints.addFormat(zxing::BarcodeFormat::UPC_EAN_EXTENSION);
         
         // here's the meat of the decode process
-        Ref<LuminanceSource>   luminanceSource   ([self getLuminanceSourceFromSample: sampleBuffer imageBytes:&imageBytes]);
+        Ref<LuminanceSource>   luminanceSource   ([self getLuminanceSourceFromSample: sampleBuffer imageArr:imageArr]);
         //            [self dumpImage: [self getImageFromLuminanceSource:luminanceSource]];
         Ref<Binarizer>         binarizer         (new HybridBinarizer(luminanceSource));
         Ref<BinaryBitmap>      bitmap            (new BinaryBitmap(binarizer));
@@ -601,24 +609,30 @@ parentViewController:(UIViewController*)parentViewController
     //        NSLog(@"decoding completed in %dms", (int) (timeElapsed * 1000));
     
     // free the buffer behind the LuminanceSource
-    if (imageBytes) {
-        free(imageBytes);
-    }
+    imageArr.reset(nil);
 }
 
 //--------------------------------------------------------------------------
 // convert barcode format to string
 //--------------------------------------------------------------------------
 - (NSString*)formatStringFrom:(zxing::BarcodeFormat)format {
-    if (format == zxing::BarcodeFormat_QR_CODE)      return @"QR_CODE";
-    if (format == zxing::BarcodeFormat_DATA_MATRIX)  return @"DATA_MATRIX";
-    if (format == zxing::BarcodeFormat_UPC_E)        return @"UPC_E";
-    if (format == zxing::BarcodeFormat_UPC_A)        return @"UPC_A";
-    if (format == zxing::BarcodeFormat_EAN_8)        return @"EAN_8";
-    if (format == zxing::BarcodeFormat_EAN_13)       return @"EAN_13";
-    if (format == zxing::BarcodeFormat_CODE_128)     return @"CODE_128";
-    if (format == zxing::BarcodeFormat_CODE_39)      return @"CODE_39";
-    if (format == zxing::BarcodeFormat_ITF)          return @"ITF";
+    if (format == zxing::BarcodeFormat::AZTEC)              return @"AZTEC";
+    if (format == zxing::BarcodeFormat::CODABAR)            return @"CODABAR";
+    if (format == zxing::BarcodeFormat::CODE_39)            return @"CODE_39";
+    if (format == zxing::BarcodeFormat::CODE_93)            return @"CODE_93";
+    if (format == zxing::BarcodeFormat::CODE_128)           return @"CODE_128";
+    if (format == zxing::BarcodeFormat::DATA_MATRIX)        return @"DATA_MATRIX";
+    if (format == zxing::BarcodeFormat::EAN_8)              return @"EAN_8";
+    if (format == zxing::BarcodeFormat::EAN_13)             return @"EAN_13";
+    if (format == zxing::BarcodeFormat::ITF)                return @"ITF";
+    if (format == zxing::BarcodeFormat::MAXICODE)           return @"MAXICODE";
+    if (format == zxing::BarcodeFormat::PDF_417)            return @"PDF_417";
+    if (format == zxing::BarcodeFormat::QR_CODE)            return @"QR_CODE";
+    if (format == zxing::BarcodeFormat::RSS_14)             return @"RSS_14";
+    if (format == zxing::BarcodeFormat::RSS_EXPANDED)       return @"RSS_EXPANDED";
+    if (format == zxing::BarcodeFormat::UPC_A)              return @"UPC_A";
+    if (format == zxing::BarcodeFormat::UPC_E)              return @"UPC_E";
+    if (format == zxing::BarcodeFormat::UPC_EAN_EXTENSION)  return @"UPC_EAN_EXTENSION";
     return @"???";
 }
 
@@ -626,7 +640,7 @@ parentViewController:(UIViewController*)parentViewController
 // convert capture's sample buffer (scanned picture) into the thing that
 // zxing needs.
 //--------------------------------------------------------------------------
-- (zxing::Ref<zxing::LuminanceSource>) getLuminanceSourceFromSample:(CMSampleBufferRef)sampleBuffer imageBytes:(uint8_t**)ptr {
+- (zxing::Ref<zxing::LuminanceSource>) getLuminanceSourceFromSample:(CMSampleBufferRef)sampleBuffer imageArr:(zxing::ArrayRef<char>&)greyArr {
     UIInterfaceOrientation ori = [[UIApplication sharedApplication] statusBarOrientation];
     
     CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
@@ -640,12 +654,10 @@ parentViewController:(UIViewController*)parentViewController
     // only going to get 90% of the width/height of the captured image
     size_t    greyHeight = 9 * MIN(width, height) / 10
     ,         greyWidth  = UIInterfaceOrientationIsLandscape(ori) ? 9 * MAX(width, height) / 10 : greyHeight;
-    uint8_t*  greyData   = (uint8_t*) malloc(greyWidth * greyHeight);
+    int arrSize = (int)(greyWidth * greyHeight);
+    greyArr = new zxing::Array<char>(arrSize);
     
-    // remember this pointer so we can free it later
-    *ptr = greyData;
-    
-    if (!greyData) {
+    if (!greyArr->values().data()) {
         CVPixelBufferUnlockBaseAddress(imageBuffer,0);
         throw new zxing::ReaderException("out of memory");
     }
@@ -670,7 +682,8 @@ parentViewController:(UIViewController*)parentViewController
             0.59 * baseAddress[baseOffset + 1] +
             0.30 * baseAddress[baseOffset + 2];
             
-            greyData[nj*greyHeight + ni] = value;
+            int idx = (int)(nj*greyHeight + ni);
+            greyArr[idx] = value;
         }
     }
     
@@ -678,7 +691,7 @@ parentViewController:(UIViewController*)parentViewController
     
     using namespace zxing;
     
-    Ref<LuminanceSource> luminanceSource (new GreyscaleLuminanceSource(greyData,
+    Ref<LuminanceSource> luminanceSource (new GreyscaleLuminanceSource(greyArr,
                                                                        (int)greyHeight, (int)greyWidth,
                                                                        0, 0,
                                                                        (int)greyHeight, (int)greyWidth,
@@ -692,7 +705,8 @@ parentViewController:(UIViewController*)parentViewController
 // for debugging
 //--------------------------------------------------------------------------
 - (UIImage*) getImageFromLuminanceSource:(zxing::LuminanceSource*)luminanceSource  {
-    unsigned char* bytes = luminanceSource->getMatrix();
+    zxing::ArrayRef<char> chararr = luminanceSource->getMatrix();
+    char* bytes = chararr->values().data();
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
     CGContextRef context = CGBitmapContextCreate(
                                                  bytes,
