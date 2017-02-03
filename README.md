@@ -59,15 +59,24 @@ The following barcode types are currently supported:
 
 ### iOS
 
-* QR_CODE (even inverted!)
+* AZTEC
+* CODABAR
+* CODE_39
+* CODE_93
+* CODE_128
 * DATA_MATRIX
-* UPC_E
-* UPC_A
 * EAN_8
 * EAN_13
-* CODE_128
-* CODE_39
 * ITF
+* MAXICODE
+* PDF_417
+* QR_CODE (even inverted!)
+* RSS_14
+* RSS_EXPANDED
+* UPC_A
+* UPC_E
+* UPC_EAN_EXTENSION
+
 
 ### Windows8
 
