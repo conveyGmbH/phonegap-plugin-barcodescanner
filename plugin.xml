@@ -27,7 +27,7 @@
                 <param name="ios-package" value="CDVBarcodeScanner" />
             </feature>
         </config-file>
-	<preference name="CAMERA_USAGE_DESCRIPTION" default=" "/>
+	<preference name="CAMERA_USAGE_DESCRIPTION" default="To scan barcodes"/>
 	<config-file target="*-Info.plist" parent="NSCameraUsageDescription">
 	      <string>$CAMERA_USAGE_DESCRIPTION</string>
     	</config-file>
