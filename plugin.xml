@@ -68,7 +68,8 @@
     </config-file>
     <framework src="src/android/barcodescanner.gradle" custom="true" type="gradleReference"/>
     <resource-file src="src/android/barcodescanner-release.aar" target="libs/barcodescanner.aar"/>
-  </platform>
+    <dependency id="cordova-plugin-compat" version="^1.0.0"/>
+</platform>
   <platform name="windows">
     <js-module src="src/windows/BarcodeScannerProxy.js" name="BarcodeScannerProxy">
       <merges target=""/>
