@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) Microsoft Open Technologies, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
@@ -245,7 +245,7 @@ module.exports = {
     scan: function (success, fail, args) {
         var capturePreview,
             capturePreviewAlignmentMark,
-            captureCancelButton,
+            capturePreviewFrame,
             navigationButtonsDiv,
             previewMirroring,
             closeButton,
@@ -261,7 +261,7 @@ module.exports = {
 
         function updatePreviewForRotation(evt) {
             if (!capture) {
-                return;
+                return WinJS.Promise.as();
             }
 
             var displayInformation = (evt && evt.target) || Windows.Graphics.Display.DisplayInformation.getForCurrentView();
@@ -275,6 +275,9 @@ module.exports = {
             capture.setPreviewRotation(degreesToRotation(rotDegree));
             return WinJS.Promise.as();
         }
+        function clickPreview() {
+            focus();
+        }
 
         /**
          * Creates a preview frame and necessary objects
@@ -282,21 +285,19 @@ module.exports = {
         function createPreview() {
 
             // Create fullscreen preview
-            var capturePreviewFrameStyle = document.createElement('link');
+            var capturePreviewFrameStyle = document.createElement("link");
             capturePreviewFrameStyle.rel = "stylesheet";
             capturePreviewFrameStyle.type = "text/css";
             capturePreviewFrameStyle.href = urlutil.makeAbsolute("/www/css/plugin-barcodeScanner.css");
 
             document.head.appendChild(capturePreviewFrameStyle);
 
-            capturePreviewFrame = document.createElement('div');
+            capturePreviewFrame = document.createElement("div");
             capturePreviewFrame.className = "barcode-scanner-wrap";
 
             capturePreview = document.createElement("video");
             capturePreview.className = "barcode-scanner-preview";
-            capturePreview.addEventListener('click', function () {
-                focus();
-            });
+            capturePreview.addEventListener("click", clickPreview, false);
 
             capturePreviewAlignmentMark = document.createElement('div');
             capturePreviewAlignmentMark.className = "barcode-scanner-mark";
@@ -314,7 +315,7 @@ module.exports = {
 
             BarcodeReader.scanCancelled = false;
             closeButton.addEventListener("click", cancelPreview, false);
-            document.addEventListener('backbutton', cancelPreview, false);
+            document.addEventListener("backbutton", cancelPreview, false);
 
             [capturePreview, capturePreviewAlignmentMark, navigationButtonsDiv].forEach(function (element) {
                 capturePreviewFrame.appendChild(element);
@@ -475,11 +476,16 @@ module.exports = {
                 });
 
                 var preferredProps = deviceProps.filter(function(prop){
-                    // Filter out props where frame size is between 640*480 and 1280*720
-                    return prop.width >= 640 && prop.height >= 480 && prop.width <= 1280 && prop.height <= 720;
+                    // Filter out props where max size is between 1024 and 1600
+                    var maxSize;
+                    if (prop.width > prop.height) {
+						maxSize = prop.width;
+					} else {
+						maxSize = prop.height;
+				    }
+				    return maxSize >= 1024 && maxSize <= 1600;
                 });
 
-                // prefer video frame size between between 640*480 and 1280*720
                 // use maximum resolution otherwise
                 var maxResProps = preferredProps[0] || deviceProps[0];
                 return controller.setMediaStreamPropertiesAsync(Windows.Media.Capture.MediaStreamType.videoPreview, maxResProps)
@@ -544,7 +550,7 @@ module.exports = {
             var promise = WinJS.Promise.as();
 
             Windows.Graphics.Display.DisplayInformation.getForCurrentView().removeEventListener("orientationchanged", updatePreviewForRotation, false);
-            document.removeEventListener('backbutton', cancelPreview);
+            document.removeEventListener("backbutton", cancelPreview);
 
             if (capturePreview) {
                 var isPlaying = !capturePreview.paused && !capturePreview.ended && capturePreview.readyState > 2;
@@ -557,6 +563,10 @@ module.exports = {
                 if (capturePreview.load) {
                     capturePreview.load();
                 }
+                capturePreview.removeEventListener("click", clickPreview);
+            }
+            if (closeButton) {
+                closeButton.removeEventListener("click", cancelPreview);
             }
 
             if (capturePreviewFrame) {
