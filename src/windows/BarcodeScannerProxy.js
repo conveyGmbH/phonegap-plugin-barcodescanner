@@ -250,7 +250,20 @@ module.exports = {
             previewMirroring,
             closeButton,
             capture,
-            reader;
+            reader,
+            rotationDegree;
+
+        rotationDegree = 0;
+        if (args && args[0]) {
+            if (typeof args[0].rotationDegree === "string") {
+                rotationDegree = parseInt(args[0].rotationDegree);
+            } else if (typeof args[0].rotationDegree === "number") {
+                rotationDegree = args[0].rotationDegree;
+            }
+        }
+        if (rotationDegree) {
+            rotationDegree = rotationDegree % 360;
+        }
 
         // Save call state for suspend/resume
         BarcodeReader.scanCallArgs = {
@@ -298,6 +311,10 @@ module.exports = {
             capturePreview = document.createElement("video");
             capturePreview.className = "barcode-scanner-preview";
             capturePreview.addEventListener("click", clickPreview, false);
+
+            if (rotationDegree) {
+                capturePreview.style.transform = "rotate(" + rotationDegree.toString() + "deg)";
+            }
 
             capturePreviewAlignmentMark = document.createElement('div');
             capturePreviewAlignmentMark.className = "barcode-scanner-mark";
@@ -689,7 +706,7 @@ function waitForScanEnd() {
 
 function suspend(args) {
     BarcodeReader.suspended = true;
-    if (args) {
+    if (args && typeof args.setPromise === "function") {
         args.setPromise(BarcodeReader.destroyPreview()
         .then(waitForScanEnd, waitForScanEnd));
     } else {
