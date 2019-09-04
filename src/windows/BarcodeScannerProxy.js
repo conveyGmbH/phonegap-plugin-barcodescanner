@@ -206,7 +206,7 @@ BarcodeReader.prototype.readCode = function () {
         if (result) {
             for (var i = 0; i < self._results.length; i++) {
                 if (self._results[i] !== result.text) {
-                    self._results = [];
+                    self._results.length = 0;
                     break;
                 }
             }
