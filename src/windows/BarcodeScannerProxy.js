@@ -157,6 +157,7 @@ BarcodeReader.prototype.init = function (capture, width, height) {
     this._height = height;
     this._zxingReader = new ZXing.BarcodeReader();
     this._zxingReader.tryHarder = true;
+    this._results = [];
 };
 
 /**
@@ -202,7 +203,18 @@ BarcodeReader.prototype.readCode = function () {
     .then(function (result) {
         if (self._cancelled)
             return null;
-
+        if (result) {
+            for (var i = 0; i < self._results.length; i++) {
+                if (self._results[i] !== result.text) {
+                    self._results = [];
+                    break;
+                }
+            }
+            self._results.push(result.text);
+            if (self._results.length < 5) {
+                result = null;
+            }
+        }
         return result || (self._promise = self.readCode());
     });
 };
