@@ -1,10 +1,10 @@
-def minSdkVersion = 16
+/*def minSdkVersion = 16
 
 if(cdvMinSdkVersion == null) {
     ext.cdvMinSdkVersion = minSdkVersion;
 } else if (cdvMinSdkVersion.toInteger() < minSdkVersion) {
     ext.cdvMinSdkVersion = minSdkVersion;
-}
+}*/
 
 repositories{
     jcenter()
