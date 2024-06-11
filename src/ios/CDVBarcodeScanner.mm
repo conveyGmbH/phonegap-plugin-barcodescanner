@@ -923,7 +923,21 @@ parentViewController:(UIViewController*)parentViewController
         }];
     }
     else {
-        self.inputDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+		if (@available(iOS 13.0, *)) {
+			AVCaptureDeviceDiscoverySession * discoverySession = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInWideAngleCamera]
+                                                               mediaType:AVMediaTypeVideo
+                                                                position:AVCaptureDevicePositionBack];
+			if (discoverySession.devices.count == 0) {
+				// no BuiltInTripleCamera
+				self.inputDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+			} else {
+				self.inputDevice = discoverySession.devices.firstObject;
+			}
+		} else {
+			// Fallback on earlier versions
+			self.inputDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+		}
+        //self.inputDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
     }
     if (!self.inputDevice) return @"unable to obtain video capture device";
     
