@@ -924,13 +924,13 @@ parentViewController:(UIViewController*)parentViewController
     }
     else {
 		if (@available(iOS 13.0, *)) {
-			AVCaptureDeviceDiscoverySession * discoverySession = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInWideAngleCamera]
-                                                               mediaType:AVMediaTypeVideo
-                                                                position:AVCaptureDevicePositionBack];
-			if (discoverySession.devices.count == 0) {
-				// no BuiltInTripleCamera
+			AVCaptureDeviceDiscoverySession * discoverySession = [ AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:[ NSArray arrayWithObjects:AVCaptureDeviceTypeBuiltInTripleCamera, nil ] 
+                                                                mediaType:AVMediaTypeVideo 
+                                                                position:AVCaptureDevicePositionBack ];     
+      if (discoverySession.devices.count == 0)     {         
+        // no BuiltInTripleCamera     
 				self.inputDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-			} else {
+      } else {
 				self.inputDevice = discoverySession.devices.firstObject;
 			}
 		} else {
