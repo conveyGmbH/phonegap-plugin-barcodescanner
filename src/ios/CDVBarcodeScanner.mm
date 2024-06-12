@@ -575,9 +575,22 @@ parentViewController:(UIViewController*)parentViewController
             }
         }];
     } else {
-        device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+	if (@available(iOS 13.0, *)) {
+		AVCaptureDeviceDiscoverySession * discoverySession = [ AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:[ NSArray arrayWithObjects:AVCaptureDeviceTypeBuiltInTripleCamera, nil ] 
+							mediaType:AVMediaTypeVideo 
+							position:AVCaptureDevicePositionBack ];     
+		if (discoverySession.devices.count == 0)     {         
+			// no BuiltInTripleCamera     
+			device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+		} else {
+			device = discoverySession.devices.firstObject;
+		}
+	} else {
+		// Fallback on earlier versions
+		device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+	}
+        //device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
         if (!device) return @"unable to obtain video capture device";
-
     }
 
     // set focus params if available to improve focusing
@@ -921,23 +934,21 @@ parentViewController:(UIViewController*)parentViewController
                 self.inputDevice = obj;
             }
         }];
-    }
-    else {
-		if (@available(iOS 13.0, *)) {
-			AVCaptureDeviceDiscoverySession * discoverySession = [ AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:[ NSArray arrayWithObjects:AVCaptureDeviceTypeBuiltInTripleCamera, nil ] 
+    } else {
+      if (@available(iOS 13.0, *)) {
+        AVCaptureDeviceDiscoverySession * discoverySession = [ AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:[ NSArray arrayWithObjects:AVCaptureDeviceTypeBuiltInTripleCamera, nil ] 
                                                                 mediaType:AVMediaTypeVideo 
                                                                 position:AVCaptureDevicePositionBack ];     
-      if (discoverySession.devices.count == 0)     {         
-        // no BuiltInTripleCamera     
-				self.inputDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+        if (discoverySession.devices.count == 0)     {         
+          // no BuiltInTripleCamera     
+	  self.inputDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+        } else {
+	  self.inputDevice = discoverySession.devices.firstObject;
+        }
       } else {
-				self.inputDevice = discoverySession.devices.firstObject;
-			}
-		} else {
-			// Fallback on earlier versions
-			self.inputDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-		}
-        //self.inputDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+	// Fallback on earlier versions
+	self.inputDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+      }
     }
     if (!self.inputDevice) return @"unable to obtain video capture device";
     
