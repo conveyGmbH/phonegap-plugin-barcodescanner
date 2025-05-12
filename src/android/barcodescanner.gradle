@@ -18,7 +18,7 @@ repositories{
 dependencies {
     implementation 'com.android.support:support-v4:+'
     implementation(name:'barcodescanner', ext:'aar')
-    implementation 'com.google.android.gms:play-services-code-scanner:16.1.0'
+    //implementation 'com.google.android.gms:play-services-code-scanner:16.1.0'
 }
 
 android {
