@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PhoneGap is available under *either* the terms of the modified BSD license *or* the
  * MIT License (2008). See http://opensource.org/licenses/alphabetical for full text.
  *
@@ -51,6 +51,7 @@ public class BarcodeScanner extends CordovaPlugin {
     private static final String SHOW_FLIP_CAMERA_BUTTON = "showFlipCameraButton";
     private static final String RESULTDISPLAY_DURATION = "resultDisplayDuration";
     private static final String SHOW_TORCH_BUTTON = "showTorchButton";
+    private static final String LEGACY_BARCODESCAN = "legacyBarcodescan";
     private static final String TORCH_ON = "torchOn";
     private static final String FORMATS = "formats";
     private static final String PROMPT = "prompt";
@@ -120,15 +121,35 @@ public class BarcodeScanner extends CordovaPlugin {
             if(!hasPermisssion()) {
               requestPermissions(0);
             } else {
-              //scan(args);
-	      executeStartScan();
+                // add config as intent extras
+                if (args.length() > 0) {
+
+                    JSONObject obj;
+                    JSONArray names;
+                    String key;
+                    Object value;
+
+                    for (int i = 0; i < args.length(); i++) {
+
+                        try {
+                            obj = args.getJSONObject(i);
+                            if(obj.optBoolean(LEGACY_BARCODESCAN, false) ? true : false)
+                                scan(args);
+                            else
+                                executeStartScan(args);
+                        } catch (JSONException e) {
+                            Log.i("CordovaLog", e.getLocalizedMessage());
+                            continue;
+                        }
+                    }
+                }
             }
         } else {
             return false;
         }
         return true;
     }
-    private void executeStartScan() {
+    private void executeStartScan(final JSONArray args) {
         Log.d(LOG_TAG, "executeStartScan");
 
         cordova.getActivity().runOnUiThread(() -> {
@@ -144,7 +165,6 @@ public class BarcodeScanner extends CordovaPlugin {
             // Configure options
             Context context = cordova.getContext(); //cordova.getContext();
             GmsBarcodeScanner scanner = GmsBarcodeScanning.getClient(context, options);
-
             try {
                 scanner
                         .startScan()
@@ -152,7 +172,17 @@ public class BarcodeScanner extends CordovaPlugin {
                                 barcode -> {
                                     // Task completed successfully
                                     Log.w(LOG_TAG, "Code scanned");
-                                    callbackContext.success(barcode.getRawValue());
+                                    JSONObject obj = new JSONObject();
+                                    try {
+                                        obj.put(TEXT, barcode.getRawValue());
+                                        obj.put(FORMAT, "No Info about barcode type");
+                                        obj.put(CANCELLED, false);
+                                    } catch (JSONException e) {
+                                        Log.d(LOG_TAG, "This should never happen");
+                                    }
+                                    //this.success(new PluginResult(PluginResult.Status.OK, obj), this.callback);
+                                    //this.callbackContext.success(obj);
+                                    callbackContext.success(obj);
                                 })
                         .addOnFailureListener(
                                 e -> {
