@@ -66,6 +66,7 @@
       <uses-permission android:name="android.permission.FLASHLIGHT"/>
       <uses-feature android:name="android.hardware.camera" android:required="false"/>
     </config-file>
+	<framework src="com.google.android.gms:play-services-code-scanner:16.1.0"/>
     <framework src="src/android/barcodescanner.gradle" custom="true" type="gradleReference"/>
     <lib-file src="src/android/barcodescanner.aar"/>
 </platform>
