@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PhoneGap is available under *either* the terms of the modified BSD license *or* the
  * MIT License (2008). See http://opensource.org/licenses/alphabetical for full text.
  *
@@ -14,6 +14,7 @@ import org.json.JSONObject;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -28,6 +29,8 @@ import com.google.zxing.client.android.CaptureActivity;
 import com.google.zxing.client.android.encode.EncodeActivity;
 import com.google.zxing.client.android.Intents;
 
+import com.google.mlkit.vision.barcode.common.Barcode;
+import com.google.mlkit.vision.codescanner.*;
 /**
  * This calls out to the ZXing barcode reader and returns the result.
  *
@@ -117,14 +120,62 @@ public class BarcodeScanner extends CordovaPlugin {
             if(!hasPermisssion()) {
               requestPermissions(0);
             } else {
-              scan(args);
+              //scan(args);
+	      executeStartScan();
             }
         } else {
             return false;
         }
         return true;
     }
+    private void executeStartScan() {
+        Log.d(LOG_TAG, "executeStartScan");
 
+        cordova.getActivity().runOnUiThread(() -> {
+
+            Runnable r = new Runnable() {
+                public void run() {
+                    GmsBarcodeScannerOptions options = new GmsBarcodeScannerOptions.Builder()
+                    .setBarcodeFormats(Barcode.FORMAT_QR_CODE,
+                                Barcode.FORMAT_AZTEC)
+					.enableAutoZoom()
+                    .build();
+
+            // Configure options
+            Context context = cordova.getContext(); //cordova.getContext();
+            GmsBarcodeScanner scanner = GmsBarcodeScanning.getClient(context, options);
+
+            try {
+                scanner
+                        .startScan()
+                        .addOnSuccessListener(
+                                barcode -> {
+                                    // Task completed successfully
+                                    Log.w(LOG_TAG, "Code scanned");
+                                    callbackContext.success(barcode.getRawValue());
+                                })
+                        .addOnFailureListener(
+                                e -> {
+                                    // Task failed with an exception
+                                    Log.e(LOG_TAG, e.getMessage());
+                                    callbackContext.error(e.getMessage());
+                                })
+                        .addOnCanceledListener(() -> {
+                            // Task canceled
+                            Log.w(LOG_TAG, "Canceled by user");
+                            callbackContext.error("Canceled");
+                        });
+            } catch (Exception e) {
+                callbackContext.error(e.getMessage());
+            }
+                }
+            };
+       
+            new Thread(r).start();
+            
+        });
+
+    }
     /**
      * Starts an intent to scan and decode a barcode.
      */
