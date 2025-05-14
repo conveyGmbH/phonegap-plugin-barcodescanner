@@ -174,7 +174,7 @@ public class BarcodeScanner extends CordovaPlugin {
                                     JSONObject obj = new JSONObject();
                                     try {
                                         obj.put(TEXT, barcode.getRawValue());
-                                        obj.put(FORMAT, "No Info about barcode type");
+                                        obj.put(FORMAT, barcode.getFormat());
                                         obj.put(CANCELLED, false);
                                     } catch (JSONException e) {
                                         Log.d(LOG_TAG, "This should never happen");
