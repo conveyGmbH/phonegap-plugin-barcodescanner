@@ -157,8 +157,7 @@ public class BarcodeScanner extends CordovaPlugin {
             Runnable r = new Runnable() {
                 public void run() {
                     GmsBarcodeScannerOptions options = new GmsBarcodeScannerOptions.Builder()
-                    .setBarcodeFormats(Barcode.FORMAT_QR_CODE,
-                                Barcode.FORMAT_AZTEC)
+                    .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
 					.enableAutoZoom()
                     .build();
 
