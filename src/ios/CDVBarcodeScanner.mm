@@ -1,4 +1,4 @@
-/*
+﻿/*
  * PhoneGap is available under *either* the terms of the modified BSD license *or* the
  * MIT License (2008). See http://opensource.org/licenses/alphabetical for full text.
  *
@@ -1421,7 +1421,16 @@ parentViewController:(UIViewController*)parentViewController
 
         // it can happen that self and/or parent don't support all/the same orientations
         // and therefore eventually differ in orientation
-        UIInterfaceOrientation ori =[[UIApplication sharedApplication] statusBarOrientation];
+        //UIInterfaceOrientation ori =[[UIApplication sharedApplication] statusBarOrientation];
+        //Stand 11.09 apps works only on ios 13 and above - hung
+        UIInterfaceOrientation ori = UIInterfaceOrientationUnknown;
+        for (UIWindowScene* windowScene in [UIApplication sharedApplication].connectedScenes) {
+            if (windowScene.activationState == UISceneActivationStateForegroundActive) {
+                ori = windowScene.interfaceOrientation;
+                break;
+            }
+        }
+        
         CGRect theFrame = self.processorZXing.parentViewController.view.frame;
         CGFloat w = theFrame.size.width
         ,       h = theFrame.size.height
@@ -1443,10 +1452,47 @@ parentViewController:(UIViewController*)parentViewController
         AVCaptureVideoPreviewLayer* previewLayer = self.processorZXing.previewLayer;
         previewLayer.frame = theFrame;
         previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
-    
+        
+        UIInterfaceOrientation interfaceOrientation = UIInterfaceOrientationUnknown;
+
+        //if (@available(iOS 13.0, *)) {
+            for (UIWindowScene *windowScene in [UIApplication sharedApplication].connectedScenes) {
+                if (windowScene.activationState == UISceneActivationStateForegroundActive) {
+                    interfaceOrientation = windowScene.interfaceOrientation;
+                    break;
+                }
+            }
+        //}
+
+        // Konvertierung von UIInterfaceOrientation zu AVCaptureVideoOrientation
+        AVCaptureVideoOrientation videoOrientation = AVCaptureVideoOrientationPortrait; // Default-Wert
+
+        switch (interfaceOrientation) {
+            case UIInterfaceOrientationPortrait:
+                videoOrientation = AVCaptureVideoOrientationPortrait;
+                break;
+            case UIInterfaceOrientationPortraitUpsideDown:
+                videoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
+                break;
+            case UIInterfaceOrientationLandscapeLeft:
+                videoOrientation = AVCaptureVideoOrientationLandscapeRight; // Kamera dreht sich entgegengesetzt
+                break;
+            case UIInterfaceOrientationLandscapeRight:
+                videoOrientation = AVCaptureVideoOrientationLandscapeLeft; // Kamera dreht sich entgegengesetzt
+                break;
+            default:
+                videoOrientation = AVCaptureVideoOrientationPortrait; // Fallback
+                break;
+        }
+
+        if ([previewLayer.connection isVideoOrientationSupported]) {
+            // setze die Video-Orientierung auf das, was die Kamera sieht
+            [previewLayer.connection setVideoOrientation:videoOrientation];
+        }
+
         if ([previewLayer.connection isVideoOrientationSupported]) {
             // set video orientation to what the camera sees
-            [previewLayer.connection setVideoOrientation:ori];
+            [previewLayer.connection setVideoOrientation:videoOrientation];
         }
     
         [self.view.layer insertSublayer:previewLayer below:[[self.view.layer sublayers] objectAtIndex:0]];
@@ -1454,7 +1500,15 @@ parentViewController:(UIViewController*)parentViewController
         [self.view addSubview:[self buildOverlayView]];
     } else if (self.processor) {
         // set video orientation to what the camera sees
-        self.processor.previewLayer.connection.videoOrientation = [self interfaceOrientationToVideoOrientation:[UIApplication sharedApplication].statusBarOrientation];
+        UIInterfaceOrientation orientation;
+
+        //if (@available(iOS 13.0, *)) {
+            UIWindowScene *windowScene = (UIWindowScene *)[UIApplication sharedApplication].connectedScenes.allObjects.firstObject;
+            orientation = windowScene.interfaceOrientation;
+        //} else {
+        //    orientation = [[UIApplication sharedApplication] statusBarOrientation];
+        //}
+        self.processor.previewLayer.connection.videoOrientation = [self interfaceOrientationToVideoOrientation:orientation];
         
         // this fixes the bug when the statusbar is landscape, and the preview layer
         // starts up in portrait (not filling the whole view)
